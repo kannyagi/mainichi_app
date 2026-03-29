@@ -291,7 +291,7 @@ h1 {
 .reel-shell {
   position: relative;
   overflow: hidden;
-  min-height: calc(var(--reel-cell) * 3);
+  height: calc(var(--reel-cell) * 3);
   border-radius: 22px;
   padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.08);
