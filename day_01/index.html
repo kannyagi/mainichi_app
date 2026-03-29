@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>ゲートクラッシュラン</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="page-bg"></div>
+    <main class="game-shell">
+      <canvas id="gameCanvas" aria-label="ゲートクラッシュラン"></canvas>
+
+      <div class="hud">
+        <div class="hud-row">
+          <div class="stat-pill">
+            <span class="pill-label">人数</span>
+            <strong id="crowdValue">10</strong>
+          </div>
+          <div class="stat-pill secondary">
+            <span class="pill-label">ベスト</span>
+            <strong id="bestValue">0</strong>
+          </div>
+        </div>
+
+        <div class="progress-card">
+          <div class="progress-head">
+            <span id="stageLabel">ステージ 1 / 4</span>
+            <span id="bossLabel">ボス 150</span>
+          </div>
+          <div class="progress-track">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="startOverlay" class="overlay">
+        <div class="panel title-panel">
+          <p class="eyebrow">ハイパーカジュアル</p>
+          <h1>ゲートクラッシュラン</h1>
+          <p class="panel-copy">
+            左右にドラッグしてゲートを選び、仲間を増やして、
+            最後の敵集団を押し切ろう。
+          </p>
+          <div class="hint-strip">
+            <span>自動前進</span>
+            <span>左右ドラッグ</span>
+            <span>4ステージ</span>
+          </div>
+          <button id="startButton" class="primary-button" type="button">
+            タップして開始
+          </button>
+        </div>
+      </div>
+
+      <div id="resultOverlay" class="overlay hidden">
+        <div class="panel result-panel">
+          <p id="resultEyebrow" class="eyebrow">ステージ結果</p>
+          <h2 id="resultTitle">クリア</h2>
+          <p id="resultMessage" class="panel-copy"></p>
+          <button id="retryButton" class="primary-button" type="button">
+            リトライ
+          </button>
+        </div>
+      </div>
+
+      <div class="bottom-hint">
+        <span id="dragHint">左右にドラッグ</span>
+      </div>
+    </main>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

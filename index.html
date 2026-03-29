@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>30日アプリチャレンジ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles/site.css" />
+  </head>
+  <body>
+    <div class="page-bg" aria-hidden="true"></div>
+
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Daily App Challenge</p>
+        <h1>30日アプリチャレンジ</h1>
+        <p class="lead">
+          毎日ひとつ、ブラウザで遊べるアプリやゲームを追加していく一覧ページです。
+          スマホでもそのまま遊べる作品をまとめています。
+        </p>
+
+        <div class="hero-stats" aria-label="公開状況">
+          <div class="stat-chip">
+            <span class="stat-label">公開中</span>
+            <strong>1</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">目標</span>
+            <strong>30</strong>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-label">対応</span>
+            <strong>Mobile / PC</strong>
+          </div>
+        </div>
+      </div>
+
+      <a class="hero-cta" href="./day_01/">
+        <span class="cta-label">最新の公開作品</span>
+        <strong>Day 01 を遊ぶ</strong>
+      </a>
+    </header>
+
+    <main class="content">
+      <section class="section-head">
+        <div>
+          <p class="eyebrow">Apps</p>
+          <h2>公開中の作品</h2>
+        </div>
+        <p class="section-copy">
+          追加した作品はここに順番に並べていきます。
+        </p>
+      </section>
+
+      <section class="card-grid" aria-label="作品一覧">
+        <article class="app-card featured">
+          <div class="card-top">
+            <span class="day-badge">Day 01</span>
+            <span class="status-badge live">公開中</span>
+          </div>
+
+          <h3>ゲートクラッシュラン</h3>
+          <p class="card-copy">
+            左右ドラッグでゲートを選び、仲間を増やして最後の敵集団にぶつかる
+            ハイパーカジュアル風ランゲームです。
+          </p>
+
+          <ul class="tag-row" aria-label="特徴">
+            <li>Vanilla JS</li>
+            <li>スマホ対応</li>
+            <li>4ステージ</li>
+          </ul>
+
+          <a class="card-link" href="./day_01/">
+            <span>作品ページへ</span>
+            <strong>遊ぶ</strong>
+          </a>
+        </article>
+      </section>
+
+      <section class="coming-soon">
+        <div class="section-head compact">
+          <div>
+            <p class="eyebrow">Next</p>
+            <h2>これから追加</h2>
+          </div>
+          <p class="section-copy">day_02 以降は同じ形式で追加していけます。</p>
+        </div>
+
+        <div class="coming-list" aria-label="追加予定">
+          <div class="coming-card">
+            <span class="day-badge muted">Day 02</span>
+            <strong>準備中</strong>
+            <p>次のアプリをここに追加します。</p>
+          </div>
+          <div class="coming-card">
+            <span class="day-badge muted">Day 03</span>
+            <strong>準備中</strong>
+            <p>カードを複製してリンクを足すだけで増やせます。</p>
+          </div>
+          <div class="coming-card">
+            <span class="day-badge muted">Day 04</span>
+            <strong>準備中</strong>
+            <p>静的サイトのまま GitHub Pages や Vercel に載せられます。</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
