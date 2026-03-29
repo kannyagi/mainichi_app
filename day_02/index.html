@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>ことばスロット</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="page-bg" aria-hidden="true"></div>
+    <div class="page-sparkles" aria-hidden="true"></div>
+
+    <main class="app-shell">
+      <header class="hero-card">
+        <div class="hero-top">
+          <p class="eyebrow">Day 02</p>
+          <span class="hero-pill">Mobile Slot Game</span>
+        </div>
+
+        <h1>ことばスロット</h1>
+        <p class="hero-copy">
+          3つのリールを止めて日本語のことばをつくるゲームです。止まった言葉は
+          Wikipedia と Wiktionary の公開データを使って、その場で実在チェックと解説を表示します。
+        </p>
+
+        <div class="hero-stats" aria-label="ゲームの進行状況">
+          <div class="stat-card">
+            <span class="stat-label">ヒット</span>
+            <strong id="hitCount">0</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">ラウンド</span>
+            <strong id="roundCount">0</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">命中率</span>
+            <strong id="rateCount">0%</strong>
+          </div>
+        </div>
+      </header>
+
+      <section class="machine-card" aria-label="スロットマシン">
+        <div class="machine-head">
+          <div>
+            <p class="section-label">できたことば</p>
+            <div id="wordDisplay" class="word-display" aria-live="polite">
+              <span class="word-cell" data-word-cell="0">?</span>
+              <span class="word-cell" data-word-cell="1">?</span>
+              <span class="word-cell" data-word-cell="2">?</span>
+            </div>
+          </div>
+
+          <button id="spinButton" class="spin-button" type="button">
+            スピン
+          </button>
+        </div>
+
+        <div class="reel-stage" role="group" aria-label="3つのリール">
+          <div class="stage-glow" aria-hidden="true"></div>
+
+          <div class="reels">
+            <button
+              class="reel-shell"
+              id="reelButton0"
+              type="button"
+              data-reel-button="0"
+              aria-label="左のリールを止める"
+            >
+              <div class="reel-track" id="reelTrack0"></div>
+              <div class="reel-focus" aria-hidden="true"></div>
+            </button>
+
+            <button
+              class="reel-shell"
+              id="reelButton1"
+              type="button"
+              data-reel-button="1"
+              aria-label="中央のリールを止める"
+            >
+              <div class="reel-track" id="reelTrack1"></div>
+              <div class="reel-focus" aria-hidden="true"></div>
+            </button>
+
+            <button
+              class="reel-shell"
+              id="reelButton2"
+              type="button"
+              data-reel-button="2"
+              aria-label="右のリールを止める"
+            >
+              <div class="reel-track" id="reelTrack2"></div>
+              <div class="reel-focus" aria-hidden="true"></div>
+            </button>
+          </div>
+        </div>
+
+        <div class="control-row" aria-label="リール停止ボタン">
+          <button class="stop-button" data-stop="0" type="button">左を止める</button>
+          <button class="stop-button" data-stop="1" type="button">中央を止める</button>
+          <button class="stop-button" data-stop="2" type="button">右を止める</button>
+        </div>
+
+        <div class="sub-controls">
+          <button id="stopAllButton" class="mini-button" type="button">
+            まとめて止める
+          </button>
+          <button id="rerollButton" class="mini-button ghost" type="button">
+            文字を入れ替える
+          </button>
+        </div>
+
+        <p id="roundHint" class="round-hint">
+          スピンのたびに、3列の文字はランダムにリセットされます。各リールをタップして止めることもできます。
+        </p>
+      </section>
+
+      <section class="result-card" aria-live="polite">
+        <div class="result-head">
+          <span id="statusBadge" class="status-badge idle">待機中</span>
+          <span class="lookup-meta">Wikipedia / Wiktionary</span>
+        </div>
+
+        <h2 id="resultTitle">3文字そろえてことばを作ろう</h2>
+        <p id="resultLead" class="result-lead">
+          リールを止めたら、実在する言葉かどうかを公開データで判定します。
+        </p>
+
+        <div id="sourceList" class="source-list"></div>
+      </section>
+
+      <section class="footer-card">
+        <p class="section-label">データについて</p>
+        <p class="footer-copy">
+          判定と解説は日本語版 Wikipedia と Wiktionary の公開データを利用しています。通信状況によっては判定に数秒かかることがあります。
+        </p>
+      </section>
+    </main>
+
+    <script src="./main.js"></script>
+  </body>
+</html>
