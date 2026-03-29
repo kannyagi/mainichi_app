@@ -505,7 +505,7 @@ function prepareRound() {
 
   updateWordDisplay(getCurrentWord());
   roundHintEl.textContent =
-    "新しい文字盤を用意しました。スピンすると毎回ランダムに文字が入れ替わります。";
+    "新しい文字盤を用意しました。押した瞬間に中央で光っている文字で止まります。";
   updateControls();
 }
 
@@ -514,8 +514,10 @@ function renderReel(reel) {
   const offset = reel.position - baseIndex;
 
   reel.cells.forEach((cell, index) => {
-    const symbolIndex = mod(baseIndex + index - 2, reel.symbols.length);
+    const absoluteIndex = baseIndex + index - 2;
+    const symbolIndex = mod(absoluteIndex, reel.symbols.length);
     cell.textContent = reel.symbols[symbolIndex];
+    cell.dataset.absoluteIndex = String(absoluteIndex);
     cell.classList.remove("is-center");
   });
 
@@ -559,63 +561,17 @@ function syncFocusedCell(reel) {
   });
 }
 
-function getWordsMatchingPrefix(prefix) {
-  const matchPrefix = (word) =>
-    prefix.every((char, index) => [...word][index] === char);
+function chooseStopPosition(reel) {
+  const focusedCell = getFocusedCell(reel);
+  const absoluteIndex = Number.parseFloat(
+    focusedCell?.dataset?.absoluteIndex ?? ""
+  );
 
-  const roundMatches = state.roundWords.filter(matchPrefix);
-  if (roundMatches.length) {
-    return roundMatches;
+  if (Number.isFinite(absoluteIndex)) {
+    return absoluteIndex;
   }
 
-  return WORD_BANK.filter(matchPrefix);
-}
-
-function getPreferredSymbol(index) {
-  if (index === 0) {
-    return null;
-  }
-
-  const prefix = state.reels
-    .slice(0, index)
-    .map((reel) => (reel.phase === "spinning" ? null : getResolvedSymbol(reel)));
-
-  if (prefix.some((char) => !char)) {
-    return null;
-  }
-
-  const matches = getWordsMatchingPrefix(prefix);
-  if (!matches.length) {
-    return null;
-  }
-
-  const chosenWord = matches[Math.floor(Math.random() * matches.length)];
-  return [...chosenWord][index];
-}
-
-function chooseTargetPosition(reel, preferredSymbol) {
-  const minimumAhead = 2 + Math.floor(Math.random() * 2);
-  const minimumPosition = reel.position + minimumAhead;
-
-  if (preferredSymbol) {
-    const candidatePositions = reel.symbols
-      .map((symbol, index) => (symbol === preferredSymbol ? index : -1))
-      .filter((index) => index >= 0)
-      .flatMap((index) => {
-        const cycle = Math.floor(reel.position / reel.symbols.length);
-        return [cycle, cycle + 1, cycle + 2].map(
-          (loop) => index + loop * reel.symbols.length
-        );
-      })
-      .filter((position) => position >= minimumPosition)
-      .sort((left, right) => left - right);
-
-    if (candidatePositions.length) {
-      return candidatePositions[0];
-    }
-  }
-
-  return Math.ceil(minimumPosition + Math.random() * 4);
+  return Math.round(reel.position);
 }
 
 function updateControls() {
@@ -717,7 +673,7 @@ function startSpin() {
     "loading",
     "回転中",
     "リールを止めよう",
-    "左・中央・右の順でも、好きな順でもOKです。止めるたびに中央の文字が決まります。"
+    "左・中央・右の順でも、好きな順でもOKです。押した瞬間に中央で光っている文字が止まります。"
   );
   renderEmptyState("判定は3つのリールが止まったあとに表示されます。");
 
@@ -733,15 +689,18 @@ function scheduleStop(index) {
     return;
   }
 
-  const preferredSymbol = getPreferredSymbol(index);
-  reel.phase = "stopping";
+  reel.targetPosition = chooseStopPosition(reel);
+  reel.position = reel.targetPosition;
+  reel.phase = "stopped";
+  reel.speed = 0;
   reel.stopElapsed = 0;
-  reel.stopDuration = 0.42 + Math.random() * 0.18;
-  reel.startSpeed = reel.speed;
-  reel.startPosition = reel.position;
-  reel.targetPosition = chooseTargetPosition(reel, preferredSymbol);
+  reel.stopDuration = 0;
+  reel.startSpeed = 0;
+  reel.startPosition = reel.targetPosition;
   reel.stopButtonEl.disabled = true;
   reel.buttonEl.disabled = true;
+  renderReel(reel);
+  updateWordDisplay(getCurrentWord());
 
   if (navigator.vibrate) {
     navigator.vibrate([10, 18, 10]);
@@ -764,6 +723,15 @@ function stopAllReels() {
 
   state.reels.forEach((_, index) => scheduleStop(index));
   updateControls();
+}
+
+function bindStopTriggers(element, index) {
+  element.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    stopReel(index);
+  });
+
+  element.addEventListener("click", () => stopReel(index));
 }
 
 function finishRound() {
@@ -1062,8 +1030,8 @@ function bindEvents() {
   rerollButton.addEventListener("click", prepareRound);
 
   state.reels.forEach((reel, index) => {
-    reel.stopButtonEl.addEventListener("click", () => stopReel(index));
-    reel.buttonEl.addEventListener("click", () => stopReel(index));
+    bindStopTriggers(reel.stopButtonEl, index);
+    bindStopTriggers(reel.buttonEl, index);
   });
 }
 
