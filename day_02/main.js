@@ -201,6 +201,7 @@ function createReel(index) {
   const trackEl = document.getElementById(`reelTrack${index}`);
   const buttonEl = document.getElementById(`reelButton${index}`);
   const stopButtonEl = document.querySelector(`[data-stop="${index}"]`);
+  const focusEl = buttonEl.querySelector(".reel-focus");
   const cells = [];
 
   for (let i = 0; i < REEL_VISIBLE_BUFFER; i += 1) {
@@ -214,6 +215,7 @@ function createReel(index) {
     trackEl,
     buttonEl,
     stopButtonEl,
+    focusEl,
     cells,
     symbols: ["?", "?", "?"],
     phase: "idle",
@@ -251,6 +253,11 @@ function updateStats() {
 function getCenterSymbol(reel) {
   if (!reel.symbols.length) {
     return "?";
+  }
+
+  const focusedCell = getFocusedCell(reel);
+  if (focusedCell?.textContent?.trim()) {
+    return focusedCell.textContent.trim();
   }
 
   const index = mod(Math.round(reel.position), reel.symbols.length);
@@ -316,12 +323,47 @@ function renderReel(reel) {
   reel.cells.forEach((cell, index) => {
     const symbolIndex = mod(baseIndex + index - 2, reel.symbols.length);
     cell.textContent = reel.symbols[symbolIndex];
-    cell.classList.toggle("is-center", index === 2);
+    cell.classList.remove("is-center");
   });
 
   reel.trackEl.style.transform = `translateY(${
     -state.reelCellHeight - offset * state.reelCellHeight
   }px)`;
+
+  syncFocusedCell(reel);
+}
+
+function getFocusedCell(reel) {
+  if (!reel.focusEl || !reel.cells.length) {
+    return null;
+  }
+
+  const focusRect = reel.focusEl.getBoundingClientRect();
+  const focusCenter = focusRect.top + focusRect.height / 2;
+
+  let bestCell = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  reel.cells.forEach((cell) => {
+    const cellRect = cell.getBoundingClientRect();
+    const cellCenter = cellRect.top + cellRect.height / 2;
+    const distance = Math.abs(cellCenter - focusCenter);
+
+    if (distance < bestDistance) {
+      bestCell = cell;
+      bestDistance = distance;
+    }
+  });
+
+  return bestCell;
+}
+
+function syncFocusedCell(reel) {
+  const focusedCell = getFocusedCell(reel);
+
+  reel.cells.forEach((cell) => {
+    cell.classList.toggle("is-center", cell === focusedCell);
+  });
 }
 
 function getWordsMatchingPrefix(prefix) {
