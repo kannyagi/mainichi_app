@@ -152,7 +152,6 @@ input:focus-visible {
 
 .hero-card,
 .game-card,
-.guide-card,
 .share-panel,
 .mode-button {
   backdrop-filter: blur(14px);
@@ -245,6 +244,7 @@ input:focus-visible {
   gap: 12px;
 }
 
+.language-toggle,
 .sound-toggle,
 .share-button,
 .submit-button,
@@ -261,11 +261,24 @@ input:focus-visible {
     opacity 160ms ease;
 }
 
+.language-toggle,
 .sound-toggle {
   min-height: 48px;
   padding: 0 18px;
-  border: none;
   border-radius: 999px;
+}
+
+.language-toggle {
+  border: none;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
+.sound-toggle {
+  border: none;
+  padding: 0 18px;
+  border: none;
   color: white;
   background: linear-gradient(180deg, var(--mode-accent) 0%, var(--mode-accent-strong) 100%);
   box-shadow:
@@ -575,8 +588,7 @@ input:focus-visible {
 }
 
 .input-note,
-.picker-summary p,
-.share-note {
+.picker-summary p {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
@@ -806,7 +818,7 @@ input:focus-visible {
 
 .share-row {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -823,49 +835,6 @@ input:focus-visible {
 .share-button:first-child {
   color: white;
   background: linear-gradient(180deg, #202737 0%, #000000 100%);
-}
-
-.share-button:nth-child(2) {
-  color: white;
-  background: linear-gradient(180deg, #ff8a00 0%, #d62976 55%, #4f5bd5 100%);
-}
-
-.mode-guide {
-  display: grid;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.guide-card {
-  padding: 16px;
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at top right, rgba(255, 255, 255, 0.82), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(250, 252, 255, 0.84));
-}
-
-.guide-card.is-active {
-  box-shadow:
-    0 22px 34px rgba(19, 28, 60, 0.12),
-    0 0 0 5px var(--mode-accent-soft);
-}
-
-.guide-card h3 {
-  margin: 0;
-  font-size: 1.08rem;
-}
-
-.guide-card p {
-  margin: 10px 0 0;
-  color: var(--muted);
-  line-height: 1.65;
-}
-
-.guide-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
 }
 
 .source-note {
@@ -1048,7 +1017,6 @@ body[data-visual="pixel"] .picker-summary strong {
 body[data-visual="pixel"] .hero-card,
 body[data-visual="pixel"] .game-card,
 body[data-visual="pixel"] .share-panel,
-body[data-visual="pixel"] .guide-card,
 body[data-visual="pixel"] .mode-button,
 body[data-visual="pixel"] .question-stage,
 body[data-visual="pixel"] .feedback-panel,
@@ -1064,6 +1032,7 @@ body[data-visual="pixel"] .fact-card {
 
 body[data-visual="pixel"] .visual-frame,
 body[data-visual="pixel"] .type-button,
+body[data-visual="pixel"] .language-toggle,
 body[data-visual="pixel"] .share-button,
 body[data-visual="pixel"] .sound-toggle,
 body[data-visual="pixel"] .submit-button,
@@ -1137,6 +1106,7 @@ body[data-visual="pixel"] .type-button::after {
 
 @media (hover: hover) and (pointer: fine) {
   .mode-button:hover,
+  .language-toggle:hover,
   .share-button:hover,
   .sound-toggle:hover,
   .visual-button:hover,
@@ -1184,7 +1154,7 @@ body[data-visual="pixel"] .type-button::after {
   }
 
   .share-row {
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
   }
 
   .type-picker-grid {
@@ -1196,7 +1166,4 @@ body[data-visual="pixel"] .type-button::after {
     padding: 20px;
   }
 
-  .mode-guide {
-    margin-top: 0;
-  }
 }

@@ -6,10 +6,10 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>ポケモンクイズラボ</title>
+    <title>ポケモンQ</title>
     <meta
       name="description"
-      content="PokeAPI を使ったスマホ向けのポケモンクイズゲーム。シルエット、タイプ、重さ、高さ、しりとりの5モードで遊べます。"
+      content="PokeAPI を使ったスマホ向けのポケモンクイズゲーム。全ポケモン対応、日英切り替え対応で、シルエット、タイプ、重さ、高さ、しりとりの5モードを遊べます。"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,20 +27,30 @@
     <main class="app-shell">
       <header class="hero-card">
         <div class="hero-copy">
-          <p class="eyebrow">Day 01 / PokeAPI Quiz Game</p>
-          <h1>ポケモンクイズラボ</h1>
-          <p class="hero-text">
-            文字入力で当てるクイズと、ロゴ感のあるタイプ選択、重さ・高さの見比べを
-            1画面で遊べるスマホ向けゲームです。イラスト表示とドット絵表示も切り替えられます。
+          <p class="eyebrow" id="hero-kicker">Day 01 / PokeAPI Quiz Game</p>
+          <h1 id="app-title">ポケモンQ</h1>
+          <p class="hero-text" id="hero-text">
+            全ポケモンを収録したスマホ向けクイズゲームです。名前入力、タイプ選択、
+            重さ・高さくらべ、しりとりクイズを、日本語と英語の切り替えや
+            イラスト・ドット絵の表示切り替えつきで遊べます。
           </p>
           <div class="hero-chips">
-            <span id="hero-count-chip">251匹収録</span>
-            <span>5モード</span>
-            <span>入力 + 選択式</span>
+            <span id="hero-count-chip">全ポケモン収録</span>
+            <span id="hero-mode-chip">5モード</span>
+            <span id="hero-style-chip">入力 + 選択式</span>
           </div>
         </div>
 
         <div class="hero-actions">
+          <button
+            id="language-toggle"
+            class="language-toggle"
+            type="button"
+            aria-label="言語を切り替える"
+          >
+            English
+          </button>
+
           <button
             id="sound-toggle"
             class="sound-toggle"
@@ -81,19 +91,19 @@
       <section class="game-card">
         <div class="status-grid">
           <article class="status-pill">
-            <span>モード</span>
+            <span id="status-label-mode">モード</span>
             <strong id="status-mode">準備中</strong>
           </article>
           <article class="status-pill">
-            <span>ラウンド</span>
+            <span id="status-label-round">ラウンド</span>
             <strong id="status-round">0 / 0</strong>
           </article>
           <article class="status-pill">
-            <span>スコア</span>
+            <span id="status-label-score">スコア</span>
             <strong id="status-score">0</strong>
           </article>
           <article class="status-pill">
-            <span>ベスト</span>
+            <span id="status-label-best">ベスト</span>
             <strong id="status-best">0</strong>
           </article>
         </div>
@@ -104,7 +114,7 @@
             <p class="eyebrow">Loading</p>
             <h2>ポケモン図鑑を準備しています</h2>
             <p>
-              PokeAPI 由来のデータを読み込んで、すぐ遊べる状態にしています。
+              PokeAPI 由来の全ポケモンデータを読み込んで、すぐ遊べる状態にしています。
             </p>
           </section>
         </div>
@@ -113,9 +123,9 @@
 
         <section class="feedback-panel" id="feedback-panel" aria-live="polite">
           <p class="feedback-kicker">準備中</p>
-          <h2 class="feedback-title">クイズをロードしています</h2>
+          <h2 class="feedback-title">ポケモン図鑑を準備しています</h2>
           <p class="feedback-text">
-            画像と問題データの用意が終わると、最初のラウンドが始まります。
+            PokeAPI 由来の全ポケモンデータを読み込んで、すぐ遊べる状態にしています。
           </p>
         </section>
 
@@ -130,29 +140,21 @@
       </section>
 
       <section class="share-panel">
-        <p class="eyebrow">Share</p>
+        <p class="eyebrow" id="share-heading">Share</p>
         <div class="share-row">
           <button class="share-button" id="share-x" type="button">Xでシェア</button>
-          <button class="share-button" id="share-instagram" type="button">
-            Instagramでシェア
-          </button>
           <button class="share-button" id="share-copy" type="button">
             URLをコピー
           </button>
         </div>
-        <p class="share-note" id="share-note">
-          Instagram はモバイルの共有シート経由で共有できます。
-        </p>
       </section>
-
-      <section class="mode-guide" id="mode-guide"></section>
 
       <footer class="source-note">
         <p>
           Data powered by
           <a href="https://pokeapi.co/" target="_blank" rel="noreferrer">PokeAPI</a>
         </p>
-        <p><a href="../">一覧ページへ戻る</a></p>
+        <p><a id="back-link" href="../">一覧ページへ戻る</a></p>
       </footer>
     </main>
 
