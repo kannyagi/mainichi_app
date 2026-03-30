@@ -778,6 +778,61 @@ input:focus-visible {
   font-size: 0.88rem;
 }
 
+.answer-gallery-card {
+  display: grid;
+  gap: 12px;
+}
+
+.answer-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.answer-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-soft);
+}
+
+.answer-card-visual {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  padding: 8px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.76), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(232, 247, 255, 0.92));
+}
+
+.answer-card-visual img {
+  width: min(22vw, 92px);
+  max-height: 88px;
+  object-fit: contain;
+}
+
+.answer-card-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.answer-card-name {
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.answer-card-copy p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
 .type-pill {
   color: white;
   background: linear-gradient(180deg, var(--mode-accent) 0%, var(--mode-accent-strong) 100%);
@@ -1021,6 +1076,7 @@ body[data-visual="pixel"] .mode-button,
 body[data-visual="pixel"] .question-stage,
 body[data-visual="pixel"] .feedback-panel,
 body[data-visual="pixel"] .type-panel,
+body[data-visual="pixel"] .answer-card,
 body[data-visual="pixel"] .quiz-input,
 body[data-visual="pixel"] .compare-choice,
 body[data-visual="pixel"] .compare-card-visual,
@@ -1035,6 +1091,7 @@ body[data-visual="pixel"] .type-button,
 body[data-visual="pixel"] .language-toggle,
 body[data-visual="pixel"] .share-button,
 body[data-visual="pixel"] .sound-toggle,
+body[data-visual="pixel"] .answer-card-visual,
 body[data-visual="pixel"] .submit-button,
 body[data-visual="pixel"] .ghost-button,
 body[data-visual="pixel"] .primary-button,
@@ -1050,7 +1107,8 @@ body[data-visual="pixel"] .chain-chip {
 }
 
 body[data-visual="pixel"] .visual-frame img,
-body[data-visual="pixel"] .compare-card-visual img {
+body[data-visual="pixel"] .compare-card-visual img,
+body[data-visual="pixel"] .answer-card-visual img {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -1061,6 +1119,11 @@ body[data-visual="pixel"] .visual-frame img {
 }
 
 body[data-visual="pixel"] .compare-card-visual img {
+  width: min(18vw, 72px);
+  max-height: 72px;
+}
+
+body[data-visual="pixel"] .answer-card-visual img {
   width: min(18vw, 72px);
   max-height: 72px;
 }

@@ -122,6 +122,8 @@ const UI_COPY = {
     singleTypeHint: "単タイプのポケモンは 1 つだけ選べば正解です。",
     answerInput: "あなたの入力",
     answerChoice: "あなたの選択",
+    answerPokemon: "正解のポケモン",
+    answerPokemonMany: "条件に合うポケモン",
     noInput: "未入力",
     dexMemo: "ずかんメモ",
     correct: "正解",
@@ -180,6 +182,8 @@ const UI_COPY = {
     singleTypeHint: "Single-type Pokemon are correct with just one selected type.",
     answerInput: "Your answer",
     answerChoice: "Your choice",
+    answerPokemon: "Correct Pokemon",
+    answerPokemonMany: "Valid Answers",
     noInput: "No input",
     dexMemo: "Pokedex note",
     correct: "Correct",
@@ -608,6 +612,7 @@ function buildSilhouetteQuestion() {
     usedIds: [pokemon.id],
     acceptedAnswerKeys: isEnglish ? pokemon.answerKeysEn : pokemon.answerKeysJa,
     correctPokemon: pokemon,
+    resultPokemon: [pokemon],
     revealTitle: isEnglish
       ? `${getLocalizedName(pokemon)} is correct`
       : `${getLocalizedName(pokemon)}が正解です`,
@@ -637,6 +642,7 @@ function buildTypeQuestion() {
     usedIds: [pokemon.id],
     correctTypeKeys: pokemon.types.map((type) => type.key),
     correctPokemon: pokemon,
+    resultPokemon: [pokemon],
     revealTitle: isEnglish
       ? `${getLocalizedName(pokemon)} is ${joinTypeLabels(pokemon.types)}`
       : `${getLocalizedName(pokemon)}のタイプは ${joinTypeLabels(pokemon.types)}`,
@@ -709,6 +715,7 @@ function buildCompareQuestion(metric) {
     usedIds: [left.id, right.id],
     correctAnswerId,
     correctPokemon: winner,
+    resultPokemon: [winner],
     revealTitle: isEnglish
       ? `${getLocalizedName(winner)} is ${metric === "weightKg" ? "heavier" : "taller"}`
       : `${getLocalizedName(winner)}の方が${metric === "weightKg" ? "重い" : "高い"}です`,
@@ -755,6 +762,18 @@ function buildShiritoriQuestion() {
       continue;
     }
 
+    const matches = sortPokemonForDisplay(findShiritoriMatches(before, after, locale), locale);
+
+    if (!matches.length) {
+      continue;
+    }
+
+    const acceptedAnswerKeys = collectAnswerKeys(matches, locale);
+    const primaryAnswer = matches.find((entry) => entry.id === correct.id) ?? matches[0];
+    const startSound = before[chainKey].last;
+    const endSound = after[chainKey].first;
+    const hasMultipleAnswers = matches.length > 1;
+
     return {
       mode: "shiritori",
       inputKind: "text",
@@ -764,26 +783,37 @@ function buildShiritoriQuestion() {
           : "しりとりの真ん中に入るポケモンは？",
       helper:
         locale === "en"
-          ? "Type the Pokemon whose English name starts with the previous ending and ends with the next starting letter."
-          : "前の終わりの音で始まり、次の始まりの音で終わるポケモン名を入力してください。",
+          ? "Type the Pokemon whose English name starts with the previous ending and ends with the next starting letter. If more than one fits, any of them counts as correct."
+          : "前の終わりの音で始まり、次の始まりの音で終わるポケモン名を入力してください。複数いる場合は、どれでも正解です。",
       inputPlaceholder:
         locale === "en" ? "Type the middle Pokemon name" : "真ん中のポケモン名を入力",
       before,
       after,
       usedIds: [before.id, correct.id, after.id],
-      acceptedAnswerKeys: locale === "en" ? correct.answerKeysEn : correct.answerKeysJa,
-      correctPokemon: correct,
-      revealTitle: `${getLocalizedName(before)} → ${getLocalizedName(correct)} → ${getLocalizedName(after)}`,
+      acceptedAnswerKeys,
+      correctPokemon: primaryAnswer,
+      resultPokemon: matches,
+      revealTitle: hasMultipleAnswers
+        ? locale === "en"
+          ? `${matches.length} Pokemon fit the chain`
+          : `条件に合うポケモンは ${matches.length} 匹です`
+        : `${getLocalizedName(before)} → ${getLocalizedName(primaryAnswer)} → ${getLocalizedName(after)}`,
       revealText:
-        locale === "en"
-          ? `The answer is ${getLocalizedName(correct)}: it starts with "${before[chainKey].last}" and ends with "${after[chainKey].first}".`
-          : `「${before[chainKey].last}」で始まり「${after[chainKey].first}」で終わるのは ${getLocalizedName(correct)} です。`,
-      factText: getLocalizedFlavor(correct),
-      typePills: correct.types.map((type) => getLocalizedTypeLabel(type)),
+        hasMultipleAnswers
+          ? locale === "en"
+            ? `Any Pokemon that starts with "${startSound}" and ends with "${endSound}" is accepted. The matching answers are shown below.`
+            : `「${startSound}」で始まり「${endSound}」で終わるポケモンなら、どれでも正解です。条件に合うポケモンを下に表示しています。`
+          : locale === "en"
+            ? `The answer is ${getLocalizedName(primaryAnswer)}: it starts with "${startSound}" and ends with "${endSound}".`
+            : `「${startSound}」で始まり「${endSound}」で終わるのは ${getLocalizedName(primaryAnswer)} です。`,
+      factText: hasMultipleAnswers ? "" : getLocalizedFlavor(primaryAnswer),
+      typePills: hasMultipleAnswers
+        ? []
+        : primaryAnswer.types.map((type) => getLocalizedTypeLabel(type)),
       statBadges:
         locale === "en"
-          ? [`Starts ${correct[chainKey].first}`, `Ends ${correct[chainKey].last}`]
-          : [`先頭 ${correct[chainKey].first}`, `末尾 ${correct[chainKey].last}`],
+          ? [`Starts ${startSound}`, `Ends ${endSound}`]
+          : [`先頭 ${startSound}`, `末尾 ${endSound}`],
     };
   }
 
@@ -804,6 +834,39 @@ function filterFreshCandidates(pool, excludeIds, usedIds) {
   }
 
   return pool.filter((entry) => !excludeIds.has(entry.id));
+}
+
+function findShiritoriMatches(before, after, locale) {
+  const chainKey = locale === "en" ? "chainEn" : "chainJa";
+  const startSound = before[chainKey].last;
+  const endSound = after[chainKey].first;
+
+  return state.index.middlePool[locale].filter(
+    (entry) =>
+      entry.id !== before.id &&
+      entry.id !== after.id &&
+      entry[chainKey].first === startSound &&
+      entry[chainKey].last === endSound,
+  );
+}
+
+function collectAnswerKeys(pokemonList, locale) {
+  const key = locale === "en" ? "answerKeysEn" : "answerKeysJa";
+  return [...new Set(pokemonList.flatMap((pokemon) => pokemon[key]))];
+}
+
+function sortPokemonForDisplay(pokemonList, locale) {
+  const localeName = locale === "en" ? "en" : "ja";
+  return [...pokemonList].sort((left, right) =>
+    getDisplayNameForLocale(left, locale).localeCompare(
+      getDisplayNameForLocale(right, locale),
+      localeName,
+    ),
+  );
+}
+
+function getDisplayNameForLocale(pokemon, locale) {
+  return locale === "en" ? pokemon.displayName.en : pokemon.displayName.ja;
 }
 
 function pickFreshOne(pool) {
@@ -1248,20 +1311,24 @@ function renderFeedback() {
 
   const isCorrect = getIsCurrentAnswerCorrect();
   const submissionMarkup = buildSubmissionMarkup();
+  const answerGalleryMarkup = buildAnswerGallery(question);
   const typePills = question.typePills
     .map((pill) => `<span class="type-pill">${escapeHtml(pill)}</span>`)
     .join("");
   const statBadges = question.statBadges
     .map((badge) => `<span class="stat-badge">${escapeHtml(badge)}</span>`)
     .join("");
+  const typeRowMarkup = typePills ? `<div class="type-row">${typePills}</div>` : "";
+  const statsRowMarkup = statBadges ? `<div class="stats-row">${statBadges}</div>` : "";
 
   dom.feedbackPanel.innerHTML = `
     <p class="feedback-kicker">${isCorrect ? escapeHtml(copy.correct) : escapeHtml(copy.notQuite)}</p>
     <h2 class="feedback-title">${escapeHtml(question.revealTitle)}</h2>
     <p class="feedback-text">${escapeHtml(question.revealText)}</p>
     ${submissionMarkup}
-    <div class="type-row">${typePills}</div>
-    <div class="stats-row">${statBadges}</div>
+    ${answerGalleryMarkup}
+    ${typeRowMarkup}
+    ${statsRowMarkup}
     ${
       question.factText
         ? `
@@ -1272,6 +1339,48 @@ function renderFeedback() {
         `
         : ""
     }
+  `;
+}
+
+function buildAnswerGallery(question) {
+  const pokemonList = uniquePokemonById(
+    question.resultPokemon ?? (question.correctPokemon ? [question.correctPokemon] : []),
+  );
+
+  if (!pokemonList.length) {
+    return "";
+  }
+
+  const copy = copyForLocale();
+  const heading = pokemonList.length > 1 ? copy.answerPokemonMany : copy.answerPokemon;
+
+  return `
+    <div class="fact-card answer-gallery-card">
+      <strong>${escapeHtml(heading)}</strong>
+      <div class="answer-gallery">
+        ${pokemonList
+          .map(
+            (pokemon) => `
+              <article class="answer-card">
+                <div class="answer-card-visual">
+                  <img
+                    src="${escapeAttribute(getPokemonVisual(pokemon))}"
+                    alt="${escapeAttribute(getLocalizedName(pokemon))}"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <div class="answer-card-copy">
+                  <span class="answer-card-name">${escapeHtml(getLocalizedName(pokemon))}</span>
+                  <p>${escapeHtml(getLocalizedCategory(pokemon))}</p>
+                  <p>${escapeHtml(joinTypeLabels(pokemon.types))}</p>
+                </div>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </div>
   `;
 }
 
@@ -1350,6 +1459,22 @@ function getIsCurrentAnswerCorrect() {
     default:
       return false;
   }
+}
+
+function uniquePokemonById(pokemonList) {
+  const seen = new Set();
+  const unique = [];
+
+  for (const pokemon of pokemonList) {
+    if (!pokemon || seen.has(pokemon.id)) {
+      continue;
+    }
+
+    seen.add(pokemon.id);
+    unique.push(pokemon);
+  }
+
+  return unique;
 }
 
 function renderControls() {
