@@ -150,6 +150,10 @@ async function fetchPokemonRecord(id) {
       pokemon.sprites.other?.["official-artwork"]?.front_default ??
       pokemon.sprites.front_default ??
       "",
+    sprite:
+      pokemon.sprites.front_default ??
+      pokemon.sprites.versions?.["generation-v"]?.["black-white"]?.front_default ??
+      "",
     cry: pokemon.cries?.latest ?? pokemon.cries?.legacy ?? "",
     heightM: Number((pokemon.height / 10).toFixed(1)),
     weightKg: Number((pokemon.weight / 10).toFixed(1)),

@@ -9,17 +9,17 @@
     <title>ポケモンクイズラボ</title>
     <meta
       name="description"
-      content="PokeAPI を使ったスマホ向けのポケモンクイズゲーム。シルエット、タイプ、重さ・高さ、しりとりの4モードを遊べます。"
+      content="PokeAPI を使ったスマホ向けのポケモンクイズゲーム。シルエット、タイプ、重さ、高さ、しりとりの5モードで遊べます。"
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Outfit:wght@600;700;800&family=Zen+Maru+Gothic:wght@500;700;900&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body data-mode="silhouette">
+  <body data-mode="silhouette" data-visual="art">
     <div class="backdrop backdrop-a" aria-hidden="true"></div>
     <div class="backdrop backdrop-b" aria-hidden="true"></div>
     <div class="backdrop-grid" aria-hidden="true"></div>
@@ -30,24 +30,50 @@
           <p class="eyebrow">Day 01 / PokeAPI Quiz Game</p>
           <h1>ポケモンクイズラボ</h1>
           <p class="hero-text">
-            スマホでテンポよく遊べる、4種類のポケモンクイズをひとつにまとめました。
-            シルエット、タイプ、重さ・高さ、しりとりを切り替えながら遊べます。
+            文字入力で当てるクイズと、ロゴ感のあるタイプ選択、重さ・高さの見比べを
+            1画面で遊べるスマホ向けゲームです。イラスト表示とドット絵表示も切り替えられます。
           </p>
           <div class="hero-chips">
             <span id="hero-count-chip">251匹収録</span>
-            <span>6問チャレンジ</span>
-            <span>Data: PokeAPI</span>
+            <span>5モード</span>
+            <span>入力 + 選択式</span>
           </div>
         </div>
 
-        <button
-          id="sound-toggle"
-          class="sound-toggle"
-          type="button"
-          aria-pressed="true"
-        >
-          サウンド ON
-        </button>
+        <div class="hero-actions">
+          <button
+            id="sound-toggle"
+            class="sound-toggle"
+            type="button"
+            aria-pressed="true"
+          >
+            サウンド ON
+          </button>
+
+          <div
+            class="visual-toggle"
+            id="visual-toggle"
+            role="group"
+            aria-label="表示スタイル"
+          >
+            <button
+              class="visual-button is-active"
+              type="button"
+              data-visual-mode="art"
+              aria-pressed="true"
+            >
+              イラスト
+            </button>
+            <button
+              class="visual-button"
+              type="button"
+              data-visual-mode="pixel"
+              aria-pressed="false"
+            >
+              ドット
+            </button>
+          </div>
+        </div>
       </header>
 
       <section class="mode-strip" id="mode-strip" aria-label="クイズモード"></section>
@@ -78,12 +104,12 @@
             <p class="eyebrow">Loading</p>
             <h2>ポケモン図鑑を準備しています</h2>
             <p>
-              PokeAPI 由来のデータを読み込んで、クイズをすぐ始められる状態にしています。
+              PokeAPI 由来のデータを読み込んで、すぐ遊べる状態にしています。
             </p>
           </section>
         </div>
 
-        <div class="answer-grid" id="answer-grid"></div>
+        <div class="interaction-panel" id="interaction-panel"></div>
 
         <section class="feedback-panel" id="feedback-panel" aria-live="polite">
           <p class="feedback-kicker">準備中</p>
@@ -101,6 +127,22 @@
             次の問題へ
           </button>
         </div>
+      </section>
+
+      <section class="share-panel">
+        <p class="eyebrow">Share</p>
+        <div class="share-row">
+          <button class="share-button" id="share-x" type="button">Xでシェア</button>
+          <button class="share-button" id="share-instagram" type="button">
+            Instagramでシェア
+          </button>
+          <button class="share-button" id="share-copy" type="button">
+            URLをコピー
+          </button>
+        </div>
+        <p class="share-note" id="share-note">
+          Instagram はモバイルの共有シート経由で共有できます。
+        </p>
       </section>
 
       <section class="mode-guide" id="mode-guide"></section>

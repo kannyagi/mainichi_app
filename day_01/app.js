@@ -1,43 +1,72 @@
 const QUIZ_LENGTH = 6;
 const DATA_URL = "./data/pokemon.json";
 const STORAGE_KEYS = {
-  records: "pokemon-quiz-lab-records-v1",
+  records: "pokemon-quiz-lab-records-v2",
   sound: "pokemon-quiz-lab-sound-v1",
+  visual: "pokemon-quiz-lab-visual-v1",
 };
+
+const TYPE_ORDER = [
+  "normal",
+  "fire",
+  "water",
+  "electric",
+  "grass",
+  "ice",
+  "fighting",
+  "poison",
+  "ground",
+  "flying",
+  "psychic",
+  "bug",
+  "rock",
+  "ghost",
+  "dragon",
+  "dark",
+  "steel",
+  "fairy",
+];
 
 const MODE_CONFIG = {
   silhouette: {
     label: "シルエット",
     shortLabel: "シルエット",
-    deckLabel: "影だけで当てる",
-    description: "黒いシルエットと4択だけを頼りに、ポケモンの名前を当てます。",
+    deckLabel: "入力で当てるシルエット",
+    description: "名前をキーボード入力で当てます。ひらがな・カタカナのどちらでもOKです。",
   },
   type: {
     label: "タイプクイズ",
     shortLabel: "タイプ",
-    deckLabel: "タイプを見抜く",
-    description: "表示されたポケモンが持っているタイプを、4択から選びます。",
+    deckLabel: "タイプを2つまで選ぶ",
+    description: "全18タイプから選択します。単タイプでも2つ選べる状態で挑戦できます。",
   },
-  compare: {
-    label: "どっちが重い・高い？",
-    shortLabel: "比較",
-    deckLabel: "重さと高さの勝負",
-    description: "2匹を見比べて、どちらが重いか、または背が高いかを選びます。",
+  weight: {
+    label: "どっちが重い？",
+    shortLabel: "重さ",
+    deckLabel: "重さを見比べる",
+    description: "2匹を見比べて、より重いポケモンを選びます。",
+  },
+  height: {
+    label: "どっちが高い？",
+    shortLabel: "高さ",
+    deckLabel: "高さを見比べる",
+    description: "2匹を見比べて、より背が高いポケモンを選びます。",
   },
   shiritori: {
     label: "しりとり真ん中あて",
     shortLabel: "しりとり",
-    deckLabel: "しりとりの穴埋め",
-    description: "前後の名前を見て、真ん中に入るポケモン名を当てる言葉遊びクイズです。",
+    deckLabel: "真ん中を入力する",
+    description: "前後のポケモン名から、真ん中に入る名前をキーボード入力で当てます。",
   },
 };
 
 const dom = {
   heroCountChip: document.querySelector("#hero-count-chip"),
   soundToggle: document.querySelector("#sound-toggle"),
+  visualToggle: document.querySelector("#visual-toggle"),
   modeStrip: document.querySelector("#mode-strip"),
   questionStage: document.querySelector("#question-stage"),
-  answerGrid: document.querySelector("#answer-grid"),
+  interactionPanel: document.querySelector("#interaction-panel"),
   feedbackPanel: document.querySelector("#feedback-panel"),
   restartButton: document.querySelector("#restart-button"),
   nextButton: document.querySelector("#next-button"),
@@ -46,20 +75,30 @@ const dom = {
   statusRound: document.querySelector("#status-round"),
   statusScore: document.querySelector("#status-score"),
   statusBest: document.querySelector("#status-best"),
+  shareX: document.querySelector("#share-x"),
+  shareInstagram: document.querySelector("#share-instagram"),
+  shareCopy: document.querySelector("#share-copy"),
+  shareNote: document.querySelector("#share-note"),
 };
 
 const state = {
   data: [],
   index: null,
   mode: "silhouette",
+  visualMode: loadVisualPreference(),
   currentQuestion: null,
-  selectedAnswer: null,
+  selectedTypes: [],
+  selectedCompare: null,
+  textDraft: "",
+  lastSubmission: null,
   answered: false,
   awaitingSummary: false,
   summary: null,
   loading: true,
   soundEnabled: loadSoundPreference(),
   records: loadRecords(),
+  shareNote:
+    "Instagram はモバイルの共有シート経由で共有できます。直接投稿できない環境ではコピーが使えます。",
   audio: null,
 };
 
@@ -70,15 +109,18 @@ function createSession() {
     streak: 0,
     bestStreak: 0,
     total: QUIZ_LENGTH,
+    usedIds: [],
   };
 }
 
 state.session = createSession();
 
 document.body.dataset.mode = state.mode;
+document.body.dataset.visual = state.visualMode;
 renderModeButtons();
 renderModeGuide();
 syncSoundButton();
+syncVisualButtons();
 bindEvents();
 bootstrap().catch((error) => {
   console.error(error);
@@ -97,13 +139,72 @@ async function bootstrap() {
 
   const payload = await response.json();
 
-  state.data = payload.pokemon;
+  state.data = payload.pokemon.map(enrichPokemon);
   state.index = buildIndex(state.data);
   state.loading = false;
 
   dom.heroCountChip.textContent = `${state.data.length}匹収録`;
 
   startMode(state.mode);
+}
+
+function enrichPokemon(pokemon) {
+  const sprite = pokemon.sprite || buildFallbackSpriteUrl(pokemon.id);
+  const answerKeys = [...buildAnswerKeys(pokemon.name)];
+  const simpleKanaName = isSimpleKanaName(pokemon.name);
+
+  return {
+    ...pokemon,
+    sprite,
+    answerKeys,
+    hiraganaName: toHiragana(pokemon.name),
+    simpleKanaName,
+    canBeShiritoriBefore: simpleKanaName && pokemon.shiritori?.last !== "ン",
+    canBeShiritoriMiddle: simpleKanaName && pokemon.shiritori?.last !== "ン",
+    canBeShiritoriAfter: simpleKanaName,
+  };
+}
+
+function buildIndex(pokemon) {
+  const typeMap = new Map();
+  const beforeByLast = new Map();
+  const afterByFirst = new Map();
+  const beforePool = [];
+  const middlePool = [];
+  const afterPool = [];
+
+  for (const entry of pokemon) {
+    for (const type of entry.types) {
+      if (!typeMap.has(type.key)) {
+        typeMap.set(type.key, type);
+      }
+    }
+
+    if (entry.canBeShiritoriBefore) {
+      beforePool.push(entry);
+      pushToIndex(beforeByLast, entry.shiritori.last, entry);
+    }
+
+    if (entry.canBeShiritoriMiddle) {
+      middlePool.push(entry);
+    }
+
+    if (entry.canBeShiritoriAfter) {
+      afterPool.push(entry);
+      pushToIndex(afterByFirst, entry.shiritori.first, entry);
+    }
+  }
+
+  const allTypes = TYPE_ORDER.map((key) => typeMap.get(key)).filter(Boolean);
+  return { allTypes, beforePool, middlePool, afterPool, beforeByLast, afterByFirst };
+}
+
+function pushToIndex(map, key, value) {
+  if (!map.has(key)) {
+    map.set(key, []);
+  }
+
+  map.get(key).push(value);
 }
 
 function bindEvents() {
@@ -127,44 +228,30 @@ function bindEvents() {
     }
 
     state.session.round += 1;
-    state.currentQuestion = generateQuestion(state.mode);
-    state.selectedAnswer = null;
-    state.answered = false;
+    state.currentQuestion = loadQuestion(state.mode);
+    resetInteractionState();
     render();
   });
-}
 
-function buildIndex(pokemon) {
-  const allTypes = [];
-  const seenTypes = new Set();
-  const shiritoriPool = [];
-  const byFirst = new Map();
-  const byLast = new Map();
+  dom.visualToggle.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-visual-mode]");
 
-  for (const entry of pokemon) {
-    for (const type of entry.types) {
-      if (!seenTypes.has(type.key)) {
-        seenTypes.add(type.key);
-        allTypes.push(type);
-      }
+    if (!button) {
+      return;
     }
 
-    if (entry.shiritori?.eligible) {
-      shiritoriPool.push(entry);
-      pushToIndex(byFirst, entry.shiritori.first, entry);
-      pushToIndex(byLast, entry.shiritori.last, entry);
+    const { visualMode } = button.dataset;
+
+    if (!visualMode || visualMode === state.visualMode) {
+      return;
     }
-  }
 
-  return { allTypes, shiritoriPool, byFirst, byLast };
-}
+    setVisualMode(visualMode);
+  });
 
-function pushToIndex(map, key, value) {
-  if (!map.has(key)) {
-    map.set(key, []);
-  }
-
-  map.get(key).push(value);
+  dom.shareX.addEventListener("click", shareToX);
+  dom.shareInstagram.addEventListener("click", shareToInstagram);
+  dom.shareCopy.addEventListener("click", copyShareLink);
 }
 
 function renderModeButtons() {
@@ -194,10 +281,6 @@ function renderModeButtons() {
         return;
       }
 
-      state.mode = mode;
-      document.body.dataset.mode = mode;
-      renderModeButtons();
-      renderModeGuide();
       startMode(mode);
     });
   }
@@ -228,12 +311,23 @@ function startMode(mode) {
   state.mode = mode;
   document.body.dataset.mode = mode;
   state.session = createSession();
-  state.currentQuestion = generateQuestion(mode);
-  state.selectedAnswer = null;
-  state.answered = false;
-  state.awaitingSummary = false;
   state.summary = null;
+  state.awaitingSummary = false;
+  state.currentQuestion = loadQuestion(mode);
+  resetInteractionState();
   render();
+}
+
+function loadQuestion(mode) {
+  const question = generateQuestion(mode);
+
+  for (const id of question.usedIds) {
+    if (!state.session.usedIds.includes(id)) {
+      state.session.usedIds.push(id);
+    }
+  }
+
+  return question;
 }
 
 function generateQuestion(mode) {
@@ -242,8 +336,10 @@ function generateQuestion(mode) {
       return buildSilhouetteQuestion();
     case "type":
       return buildTypeQuestion();
-    case "compare":
-      return buildCompareQuestion();
+    case "weight":
+      return buildCompareQuestion("weightKg");
+    case "height":
+      return buildCompareQuestion("heightM");
     case "shiritori":
       return buildShiritoriQuestion();
     default:
@@ -252,113 +348,98 @@ function generateQuestion(mode) {
 }
 
 function buildSilhouetteQuestion() {
-  const correct = sampleOne(state.data);
-  const options = shuffle([correct, ...sampleMany(excludeById(state.data, correct.id), 3)]);
+  const pokemon = pickFreshOne(state.data);
 
   return {
     mode: "silhouette",
+    inputKind: "text",
     prompt: "このシルエットのポケモンは？",
-    helper: "黒いシルエットと雰囲気を頼りに、4択から正しい名前を選びましょう。",
-    pokemon: correct,
-    options: options.map((entry) => ({
-      id: String(entry.id),
-      label: entry.name,
-      detail: `${entry.primaryType}タイプ`,
-    })),
-    correctAnswerId: String(correct.id),
-    revealTitle: `${correct.name}が正解です`,
-    revealText: `${correct.category}。タイプは ${joinTypeLabels(correct.types)} です。`,
-    factText: correct.flavorText,
-    typePills: correct.types.map((type) => type.label),
-    statBadges: [`No.${correct.dex}`, `${correct.heightM}m`, `${correct.weightKg}kg`],
-    cry: correct.cry,
+    helper: "ひらがな・カタカナどちらでもOK。記号つきの名前も対応します。",
+    inputPlaceholder: "ポケモンの名前を入力",
+    pokemon,
+    usedIds: [pokemon.id],
+    acceptedAnswerKeys: pokemon.answerKeys,
+    correctPokemon: pokemon,
+    revealTitle: `${pokemon.name}が正解です`,
+    revealText: `${pokemon.category}。タイプは ${joinTypeLabels(pokemon.types)} です。`,
+    factText: pokemon.flavorText,
+    typePills: pokemon.types.map((type) => type.label),
+    statBadges: [`No.${pokemon.dex}`, `${pokemon.heightM}m`, `${pokemon.weightKg}kg`],
   };
 }
 
 function buildTypeQuestion() {
-  const pokemon = sampleOne(state.data);
-  const correctType = sampleOne(pokemon.types);
-  const wrongTypePool = state.index.allTypes.filter(
-    (type) => !pokemon.types.some((entry) => entry.key === type.key),
-  );
-  const options = shuffle([correctType, ...sampleMany(wrongTypePool, 3)]);
+  const pokemon = pickFreshOne(state.data);
 
   return {
     mode: "type",
-    prompt: "このポケモンが持っているタイプは？",
-    helper: "1つだけ正しいタイプが入っています。図鑑の知識で見抜いてください。",
+    inputKind: "type",
+    prompt: "このポケモンのタイプを選んでください",
+    helper: "全18タイプから 1〜2 個まで選べます。単タイプなら 1 つだけで正解です。",
     pokemon,
-    options: options.map((type) => ({
-      id: type.key,
-      label: type.label,
-      detail: "タイプ候補",
-    })),
-    correctAnswerId: correctType.key,
+    usedIds: [pokemon.id],
+    correctTypeKeys: pokemon.types.map((type) => type.key),
+    correctPokemon: pokemon,
     revealTitle: `${pokemon.name}のタイプは ${joinTypeLabels(pokemon.types)}`,
-    revealText: `${pokemon.category}。この問題の正解は「${correctType.label}」でした。`,
+    revealText: `${pokemon.category}。持っているタイプをすべて当てると正解です。`,
     factText: pokemon.flavorText,
     typePills: pokemon.types.map((type) => type.label),
     statBadges: [`No.${pokemon.dex}`, `${pokemon.heightM}m`, `${pokemon.weightKg}kg`],
-    cry: pokemon.cry,
   };
 }
 
-function buildCompareQuestion() {
+function buildCompareQuestion(metric) {
+  const prompt = metric === "weightKg" ? "どっちが重い？" : "どっちが背が高い？";
+  const helper =
+    metric === "weightKg"
+      ? "左右のポケモンを見比べて、より重い方を選びましょう。"
+      : "左右のポケモンを見比べて、より背が高い方を選びましょう。";
+  const metricLabel = metric === "weightKg" ? "重さ" : "高さ";
+
   let left = null;
   let right = null;
-  let metric = "weightKg";
   let settled = false;
 
-  for (let attempt = 0; attempt < 200; attempt += 1) {
-    metric = Math.random() < 0.5 ? "weightKg" : "heightM";
-    [left, right] = sampleMany(state.data, 2);
+  for (let attempt = 0; attempt < 250; attempt += 1) {
+    [left, right] = pickFreshMany(state.data, 2);
+
+    if (left.id === right.id) {
+      continue;
+    }
 
     const larger = Math.max(left[metric], right[metric]);
     const smaller = Math.min(left[metric], right[metric]);
     const gap = larger - smaller;
     const ratio = larger / smaller;
+    const valid =
+      metric === "weightKg" ? gap >= 8 && ratio >= 1.15 : gap >= 0.3 && ratio >= 1.12;
 
-    if ((metric === "weightKg" && gap >= 8 && ratio >= 1.18) || (metric === "heightM" && gap >= 0.3 && ratio >= 1.16)) {
+    if (valid) {
       settled = true;
       break;
     }
   }
 
   if (!settled) {
-    [left, right] = sampleMany(state.data, 2);
-    metric = left.weightKg === right.weightKg ? "heightM" : "weightKg";
+    [left, right] = pickFreshMany(state.data, 2);
   }
 
-  const isWeight = metric === "weightKg";
   const correctAnswerId = left[metric] > right[metric] ? "left" : "right";
   const winner = correctAnswerId === "left" ? left : right;
 
   return {
-    mode: "compare",
-    prompt: isWeight ? "どっちが重い？" : "どっちが背が高い？",
-    helper: isWeight
-      ? "見た目と図鑑の印象から、より重いポケモンを選びましょう。"
-      : "身長のイメージを頼りに、より背が高いポケモンを選びましょう。",
+    mode: metric === "weightKg" ? "weight" : "height",
+    inputKind: "compare",
+    prompt,
+    helper,
     metric,
-    metricLabel: isWeight ? "重さ" : "高さ",
+    metricLabel,
     left,
     right,
-    options: [
-      {
-        id: "left",
-        label: left.name,
-        detail: left.primaryType,
-        image: left.image,
-      },
-      {
-        id: "right",
-        label: right.name,
-        detail: right.primaryType,
-        image: right.image,
-      },
-    ],
+    usedIds: [left.id, right.id],
     correctAnswerId,
-    revealTitle: `${winner.name}の方が${isWeight ? "重い" : "高い"}です`,
+    correctPokemon: winner,
+    revealTitle: `${winner.name}の方が${metric === "weightKg" ? "重い" : "高い"}です`,
     revealText: `${left.name}は ${formatMetric(left[metric], metric)}、${right.name}は ${formatMetric(right[metric], metric)}。`,
     factText: `${winner.name}のタイプは ${joinTypeLabels(winner.types)} です。`,
     typePills: winner.types.map((type) => type.label),
@@ -366,74 +447,100 @@ function buildCompareQuestion() {
       `${left.name} ${formatMetric(left[metric], metric)}`,
       `${right.name} ${formatMetric(right[metric], metric)}`,
     ],
-    cry: winner.cry,
   };
 }
 
 function buildShiritoriQuestion() {
-  for (let attempt = 0; attempt < 400; attempt += 1) {
-    const correct = sampleOne(state.index.shiritoriPool);
-    const beforeCandidates = (state.index.byLast.get(correct.shiritori.first) ?? []).filter(
-      (entry) => entry.id !== correct.id,
-    );
-    const afterCandidates = (state.index.byFirst.get(correct.shiritori.last) ?? []).filter(
-      (entry) => entry.id !== correct.id,
-    );
+  const usedIds = new Set(state.session.usedIds);
 
-    if (!beforeCandidates.length || !afterCandidates.length) {
-      continue;
-    }
-
+  for (let attempt = 0; attempt < 500; attempt += 1) {
+    const correct = pickFreshOne(state.index.middlePool);
+    const beforeCandidates = filterFreshCandidates(
+      state.index.beforeByLast.get(correct.shiritori.first) ?? [],
+      new Set([correct.id]),
+      usedIds,
+    );
     const before = sampleOne(beforeCandidates);
-    const afterPool = afterCandidates.filter((entry) => entry.id !== before.id);
 
-    if (!afterPool.length) {
+    if (!before) {
       continue;
     }
 
-    const after = sampleOne(afterPool);
-    const wrongPool = state.index.shiritoriPool.filter(
-      (entry) =>
-        entry.id !== correct.id &&
-        !(entry.shiritori.first === correct.shiritori.first && entry.shiritori.last === correct.shiritori.last),
+    const afterCandidates = filterFreshCandidates(
+      state.index.afterByFirst.get(correct.shiritori.last) ?? [],
+      new Set([correct.id, before.id]),
+      usedIds,
     );
+    const after = sampleOne(afterCandidates);
 
-    if (wrongPool.length < 3) {
+    if (!after) {
       continue;
     }
-
-    const options = shuffle([correct, ...sampleMany(wrongPool, 3)]);
 
     return {
       mode: "shiritori",
+      inputKind: "text",
       prompt: "しりとりの真ん中に入るポケモンは？",
-      helper: "前の名前の最後の音から始まり、次の名前の最初の音で終わる名前を選びます。",
+      helper: "前の終わりの音で始まり、次の始まりの音で終わるポケモン名を入力してください。",
+      inputPlaceholder: "真ん中のポケモン名を入力",
       before,
       after,
-      options: options.map((entry) => ({
-        id: String(entry.id),
-        label: entry.name,
-        detail: `${entry.shiritori.first} ... ${entry.shiritori.last}`,
-      })),
-      correctAnswerId: String(correct.id),
+      usedIds: [before.id, correct.id, after.id],
+      acceptedAnswerKeys: correct.answerKeys,
+      correctPokemon: correct,
       revealTitle: `${before.name} → ${correct.name} → ${after.name}`,
       revealText: `「${before.shiritori.last}」で始まり「${after.shiritori.first}」で終わるのは ${correct.name} です。`,
       factText: correct.flavorText,
       typePills: correct.types.map((type) => type.label),
       statBadges: [`先頭 ${correct.shiritori.first}`, `末尾 ${correct.shiritori.last}`],
-      cry: correct.cry,
     };
   }
 
   throw new Error("しりとりクイズの問題を生成できませんでした。");
 }
 
+function filterFreshCandidates(pool, excludeIds, usedIds) {
+  const filtered = pool.filter(
+    (entry) => !excludeIds.has(entry.id) && !usedIds.has(entry.id),
+  );
+
+  if (filtered.length) {
+    return filtered;
+  }
+
+  return pool.filter((entry) => !excludeIds.has(entry.id));
+}
+
+function pickFreshOne(pool) {
+  const usedIds = new Set(state.session.usedIds);
+  const fresh = pool.filter((entry) => !usedIds.has(entry.id));
+  return sampleOne(fresh.length ? fresh : pool);
+}
+
+function pickFreshMany(pool, count) {
+  const usedIds = new Set(state.session.usedIds);
+  const fresh = pool.filter((entry) => !usedIds.has(entry.id));
+  const source = fresh.length >= count ? fresh : pool;
+  return sampleMany(source, count);
+}
+
+function resetInteractionState() {
+  state.textDraft = "";
+  state.selectedTypes = [];
+  state.selectedCompare = null;
+  state.lastSubmission = null;
+  state.answered = false;
+}
+
 function render() {
   renderStatus();
   renderModeButtons();
   renderModeGuide();
+  syncSoundButton();
+  syncVisualButtons();
+  renderShareNote();
   renderQuestionStage();
-  renderAnswerGrid();
+  renderInteractionPanel();
   renderFeedback();
   renderControls();
 }
@@ -477,8 +584,8 @@ function renderQuestionStage() {
             <strong>${state.summary.plays}</strong>
           </article>
           <article class="status-pill">
-            <span>今回のモード</span>
-            <strong>${escapeHtml(MODE_CONFIG[state.mode].shortLabel)}</strong>
+            <span>表示モード</span>
+            <strong>${state.visualMode === "pixel" ? "ドット" : "イラスト"}</strong>
           </article>
         </div>
       </section>
@@ -487,11 +594,10 @@ function renderQuestionStage() {
   }
 
   const question = state.currentQuestion;
-  let markup = "";
 
-  switch (state.mode) {
+  switch (question.mode) {
     case "silhouette":
-      markup = `
+      dom.questionStage.innerHTML = `
         <section class="question-shell">
           <div class="question-head">
             <p class="eyebrow">Round ${state.session.round}</p>
@@ -499,17 +605,17 @@ function renderQuestionStage() {
             <p class="question-helper">${escapeHtml(question.helper)}</p>
           </div>
           <div class="visual-frame ${state.answered ? "is-revealed" : "is-silhouette"}">
-            <img src="${escapeAttribute(question.pokemon.image)}" alt="" loading="eager" decoding="async" />
+            <img src="${escapeAttribute(getPokemonVisual(question.pokemon))}" alt="" loading="eager" decoding="async" />
           </div>
-          <div class="helper-row">
-            <span class="helper-badge">No.${question.pokemon.dex}</span>
-            <span class="helper-badge">${escapeHtml(question.pokemon.category)}</span>
+          <div class="badge-row">
+            <span class="info-badge">No.${question.pokemon.dex}</span>
+            <span class="info-badge">${escapeHtml(question.pokemon.category)}</span>
           </div>
         </section>
       `;
       break;
     case "type":
-      markup = `
+      dom.questionStage.innerHTML = `
         <section class="question-shell">
           <div class="question-head">
             <p class="eyebrow">Round ${state.session.round}</p>
@@ -517,17 +623,18 @@ function renderQuestionStage() {
             <p class="question-helper">${escapeHtml(question.helper)}</p>
           </div>
           <div class="visual-frame ${state.answered ? "is-revealed" : ""}">
-            <img src="${escapeAttribute(question.pokemon.image)}" alt="" loading="eager" decoding="async" />
+            <img src="${escapeAttribute(getPokemonVisual(question.pokemon))}" alt="" loading="eager" decoding="async" />
           </div>
-          <div class="helper-row">
-            <span class="helper-badge">No.${question.pokemon.dex}</span>
-            <span class="helper-badge">タイプを1つ選ぶ</span>
+          <div class="badge-row">
+            <span class="info-badge">No.${question.pokemon.dex}</span>
+            <span class="info-badge">全18タイプから選択</span>
           </div>
         </section>
       `;
       break;
-    case "compare":
-      markup = `
+    case "weight":
+    case "height":
+      dom.questionStage.innerHTML = `
         <section class="question-shell">
           <div class="question-head">
             <p class="eyebrow">Round ${state.session.round}</p>
@@ -537,14 +644,14 @@ function renderQuestionStage() {
           <div class="compare-board">
             <div class="compare-meter">
               <strong>${escapeHtml(question.metricLabel)}で勝負</strong>
-              <span>左右のカードから答えを選んでください。</span>
+              <span>カードをタップして答えます。</span>
             </div>
           </div>
         </section>
       `;
       break;
     case "shiritori":
-      markup = `
+      dom.questionStage.innerHTML = `
         <section class="question-shell">
           <div class="question-head">
             <p class="eyebrow">Round ${state.session.round}</p>
@@ -566,59 +673,251 @@ function renderQuestionStage() {
       `;
       break;
     default:
-      markup = "";
+      dom.questionStage.innerHTML = "";
   }
-
-  dom.questionStage.innerHTML = markup;
 }
 
-function renderAnswerGrid() {
+function renderInteractionPanel() {
   if (state.summary) {
-    dom.answerGrid.innerHTML = "";
-    dom.answerGrid.className = "answer-grid";
+    dom.interactionPanel.innerHTML = "";
     return;
   }
 
-  const question = state.currentQuestion;
-  dom.answerGrid.className = `answer-grid${question.mode === "compare" ? " is-compare" : ""}`;
-  dom.answerGrid.innerHTML = question.options
-    .map((option) => {
-      const correct = option.id === question.correctAnswerId;
-      const selected = option.id === state.selectedAnswer;
-      let statusClass = "";
+  switch (state.currentQuestion.inputKind) {
+    case "text":
+      renderTextInteraction(state.currentQuestion);
+      break;
+    case "type":
+      renderTypeInteraction(state.currentQuestion);
+      break;
+    case "compare":
+      renderCompareInteraction(state.currentQuestion);
+      break;
+    default:
+      dom.interactionPanel.innerHTML = "";
+  }
+}
 
-      if (state.answered && correct) {
-        statusClass = " is-correct";
-      } else if (state.answered && selected && !correct) {
-        statusClass = " is-wrong";
+function renderTextInteraction(question) {
+  dom.interactionPanel.innerHTML = `
+    <form class="text-form" id="text-form">
+      <div class="text-submit-row">
+        <input
+          id="answer-input"
+          class="quiz-input"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          inputmode="text"
+          placeholder="${escapeAttribute(question.inputPlaceholder)}"
+          value="${escapeAttribute(state.textDraft)}"
+          ${state.answered ? "disabled" : ""}
+        />
+        <button class="submit-button" type="submit" ${state.answered ? "disabled" : ""}>
+          こたえる
+        </button>
+      </div>
+      <p class="input-note">${escapeHtml(question.helper)}</p>
+    </form>
+  `;
+
+  const form = dom.interactionPanel.querySelector("#text-form");
+  const input = dom.interactionPanel.querySelector("#answer-input");
+
+  input?.addEventListener("input", (event) => {
+    state.textDraft = event.target.value;
+  });
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    if (state.answered) {
+      return;
+    }
+
+    submitTextAnswer(state.textDraft);
+  });
+}
+
+function renderTypeInteraction(question) {
+  const selectedCount = state.selectedTypes.length;
+  const typeButtons = state.index.allTypes
+    .map((type) => {
+      const isSelected = state.selectedTypes.includes(type.key);
+      const isCorrect = question.correctTypeKeys.includes(type.key);
+      let stateClass = isSelected ? " is-selected" : "";
+
+      if (state.answered && isCorrect) {
+        stateClass += " is-correct";
+      } else if (state.answered && isSelected && !isCorrect) {
+        stateClass += " is-wrong";
       }
 
       return `
         <button
-          class="answer-button${question.mode === "compare" ? " is-compare" : ""}${statusClass}"
+          class="type-button${stateClass}"
           type="button"
-          data-answer-id="${escapeAttribute(option.id)}"
+          data-type-key="${type.key}"
+          data-type="${type.key}"
           ${state.answered ? "disabled" : ""}
         >
-          ${
-            question.mode === "compare"
-              ? `
-                <span class="answer-card-visual">
-                  <img src="${escapeAttribute(option.image)}" alt="" loading="lazy" decoding="async" />
-                </span>
-              `
-              : ""
-          }
-          <strong>${escapeHtml(option.label)}</strong>
-          <span>${escapeHtml(option.detail)}</span>
+          ${escapeHtml(type.label)}
         </button>
       `;
     })
     .join("");
 
-  for (const button of dom.answerGrid.querySelectorAll("[data-answer-id]")) {
-    button.addEventListener("click", () => handleAnswer(button.dataset.answerId));
+  dom.interactionPanel.innerHTML = `
+    <section class="type-panel">
+      <div class="picker-summary">
+        <strong>タイプを 2 つまで選択</strong>
+        <p class="picker-count">選択中: ${selectedCount} / 2</p>
+      </div>
+      <div class="type-picker-grid">${typeButtons}</div>
+      <div class="type-picker-footer">
+        <p class="input-note">単タイプのポケモンは 1 つだけ選べば正解です。</p>
+        <button
+          class="submit-button"
+          id="type-submit"
+          type="button"
+          ${state.answered || selectedCount === 0 ? "disabled" : ""}
+        >
+          判定する
+        </button>
+      </div>
+    </section>
+  `;
+
+  for (const button of dom.interactionPanel.querySelectorAll("[data-type-key]")) {
+    button.addEventListener("click", () => {
+      toggleTypeSelection(button.dataset.typeKey);
+    });
   }
+
+  dom.interactionPanel.querySelector("#type-submit")?.addEventListener("click", () => {
+    submitTypeAnswer();
+  });
+}
+
+function renderCompareInteraction(question) {
+  const choices = [
+    { id: "left", pokemon: question.left, detail: question.left.primaryType },
+    { id: "right", pokemon: question.right, detail: question.right.primaryType },
+  ];
+
+  dom.interactionPanel.innerHTML = `
+    <div class="compare-grid">
+      ${choices
+        .map((choice) => {
+          const isCorrect = choice.id === question.correctAnswerId;
+          const isSelected = state.selectedCompare === choice.id;
+          let stateClass = "";
+
+          if (state.answered && isCorrect) {
+            stateClass = " is-correct";
+          } else if (state.answered && isSelected && !isCorrect) {
+            stateClass = " is-wrong";
+          }
+
+          return `
+            <button
+              class="compare-choice${stateClass}"
+              type="button"
+              data-compare-answer="${choice.id}"
+              ${state.answered ? "disabled" : ""}
+            >
+              <span class="compare-card-visual">
+                <img src="${escapeAttribute(getPokemonVisual(choice.pokemon))}" alt="" loading="lazy" decoding="async" />
+              </span>
+              <strong>${escapeHtml(choice.pokemon.name)}</strong>
+              <span>${escapeHtml(choice.detail)}</span>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  for (const button of dom.interactionPanel.querySelectorAll("[data-compare-answer]")) {
+    button.addEventListener("click", () => {
+      submitCompareAnswer(button.dataset.compareAnswer);
+    });
+  }
+}
+
+function toggleTypeSelection(typeKey) {
+  if (!typeKey || state.answered) {
+    return;
+  }
+
+  if (state.selectedTypes.includes(typeKey)) {
+    state.selectedTypes = state.selectedTypes.filter((entry) => entry !== typeKey);
+    renderInteractionPanel();
+    return;
+  }
+
+  if (state.selectedTypes.length >= 2) {
+    return;
+  }
+
+  state.selectedTypes = [...state.selectedTypes, typeKey];
+  renderInteractionPanel();
+}
+
+function submitTextAnswer(value) {
+  const normalized = normalizePokemonInput(value);
+
+  if (!normalized) {
+    return;
+  }
+
+  const isCorrect = state.currentQuestion.acceptedAnswerKeys.includes(normalized);
+  lockAnswer(isCorrect, { kind: "text", value });
+}
+
+function submitTypeAnswer() {
+  if (!state.selectedTypes.length) {
+    return;
+  }
+
+  const selected = [...state.selectedTypes].sort();
+  const correct = [...state.currentQuestion.correctTypeKeys].sort();
+  const isCorrect =
+    selected.length === correct.length &&
+    selected.every((typeKey, index) => typeKey === correct[index]);
+
+  lockAnswer(isCorrect, { kind: "type", selectedTypes: selected });
+}
+
+function submitCompareAnswer(answerId) {
+  if (!answerId) {
+    return;
+  }
+
+  state.selectedCompare = answerId;
+  const isCorrect = answerId === state.currentQuestion.correctAnswerId;
+  lockAnswer(isCorrect, { kind: "compare", selectedId: answerId });
+}
+
+function lockAnswer(isCorrect, submission) {
+  if (state.answered || state.summary) {
+    return;
+  }
+
+  state.answered = true;
+  state.lastSubmission = submission;
+
+  if (isCorrect) {
+    state.session.correct += 1;
+    state.session.streak += 1;
+    state.session.bestStreak = Math.max(state.session.bestStreak, state.session.streak);
+  } else {
+    state.session.streak = 0;
+  }
+
+  state.awaitingSummary = state.session.round === state.session.total;
+  playCry(state.currentQuestion.correctPokemon?.cry);
+  render();
 }
 
 function renderFeedback() {
@@ -628,8 +927,8 @@ function renderFeedback() {
       <h2 class="feedback-title">${escapeHtml(state.summary.title)}</h2>
       <p class="feedback-text">${escapeHtml(state.summary.description)}</p>
       <div class="fact-card">
-        <strong>次の遊び方</strong>
-        <p class="fact-text">同じモードをもう一度試すか、上のモード切り替えで別のクイズに挑戦できます。</p>
+        <strong>シェアのヒント</strong>
+        <p class="fact-text">X へはそのまま共有できます。Instagram はモバイルの共有シートかコピーした文面を使うのがおすすめです。</p>
       </div>
     `;
     return;
@@ -646,7 +945,8 @@ function renderFeedback() {
     return;
   }
 
-  const isCorrect = state.selectedAnswer === question.correctAnswerId;
+  const isCorrect = getIsCurrentAnswerCorrect();
+  const submissionMarkup = buildSubmissionMarkup();
   const typePills = question.typePills
     .map((pill) => `<span class="type-pill">${escapeHtml(pill)}</span>`)
     .join("");
@@ -658,6 +958,7 @@ function renderFeedback() {
     <p class="feedback-kicker">${isCorrect ? "Correct" : "Not Quite"}</p>
     <h2 class="feedback-title">${escapeHtml(question.revealTitle)}</h2>
     <p class="feedback-text">${escapeHtml(question.revealText)}</p>
+    ${submissionMarkup}
     <div class="type-row">${typePills}</div>
     <div class="stats-row">${statBadges}</div>
     ${
@@ -673,31 +974,80 @@ function renderFeedback() {
   `;
 }
 
+function buildSubmissionMarkup() {
+  if (!state.lastSubmission) {
+    return "";
+  }
+
+  switch (state.lastSubmission.kind) {
+    case "text": {
+      const value = state.lastSubmission.value?.trim() || "未入力";
+      return `
+        <div class="fact-card">
+          <strong>あなたの入力</strong>
+          <p class="fact-text">${escapeHtml(value)}</p>
+        </div>
+      `;
+    }
+    case "type": {
+      const labels = state.lastSubmission.selectedTypes
+        .map((typeKey) => state.index.allTypes.find((type) => type.key === typeKey)?.label ?? typeKey)
+        .join(" / ");
+
+      return `
+        <div class="fact-card">
+          <strong>あなたの選択</strong>
+          <p class="fact-text">${escapeHtml(labels || "未選択")}</p>
+        </div>
+      `;
+    }
+    case "compare": {
+      const selectedPokemon =
+        state.lastSubmission.selectedId === "left"
+          ? state.currentQuestion.left
+          : state.currentQuestion.right;
+
+      return `
+        <div class="fact-card">
+          <strong>あなたの選択</strong>
+          <p class="fact-text">${escapeHtml(selectedPokemon.name)}</p>
+        </div>
+      `;
+    }
+    default:
+      return "";
+  }
+}
+
+function getIsCurrentAnswerCorrect() {
+  if (!state.lastSubmission) {
+    return false;
+  }
+
+  switch (state.lastSubmission.kind) {
+    case "text":
+      return state.currentQuestion.acceptedAnswerKeys.includes(
+        normalizePokemonInput(state.lastSubmission.value),
+      );
+    case "type": {
+      const selected = [...state.lastSubmission.selectedTypes].sort();
+      const correct = [...state.currentQuestion.correctTypeKeys].sort();
+      return (
+        selected.length === correct.length &&
+        selected.every((typeKey, index) => typeKey === correct[index])
+      );
+    }
+    case "compare":
+      return state.lastSubmission.selectedId === state.currentQuestion.correctAnswerId;
+    default:
+      return false;
+  }
+}
+
 function renderControls() {
   dom.restartButton.textContent = state.summary ? "このモードでもう一度" : "このモードをやり直す";
   dom.nextButton.hidden = state.summary || !state.answered;
   dom.nextButton.textContent = state.awaitingSummary ? "結果を見る" : "次の問題へ";
-}
-
-function handleAnswer(answerId) {
-  if (state.loading || state.answered || state.summary) {
-    return;
-  }
-
-  state.selectedAnswer = answerId;
-  state.answered = true;
-
-  if (answerId === state.currentQuestion.correctAnswerId) {
-    state.session.correct += 1;
-    state.session.streak += 1;
-    state.session.bestStreak = Math.max(state.session.bestStreak, state.session.streak);
-  } else {
-    state.session.streak = 0;
-  }
-
-  state.awaitingSummary = state.session.round === state.session.total;
-  playCry(state.currentQuestion.cry);
-  render();
 }
 
 function finalizeSession() {
@@ -720,7 +1070,6 @@ function finalizeSession() {
     bestStreak: state.session.bestStreak,
   };
   state.awaitingSummary = false;
-
   render();
 }
 
@@ -742,10 +1091,10 @@ function getSummaryTitle() {
 
 function getSummaryDescription(isNewBest) {
   if (isNewBest) {
-    return `${MODE_CONFIG[state.mode].label}で新しい自己ベストを記録しました。勢いのまま別モードにも挑戦できます。`;
+    return `${MODE_CONFIG[state.mode].label}で新しい自己ベストを記録しました。表示モードを変えてもう一度遊ぶのもおすすめです。`;
   }
 
-  return `${MODE_CONFIG[state.mode].label}を ${state.session.correct} 問正解しました。別モードに切り替えると、まったく違う感覚で遊べます。`;
+  return `${MODE_CONFIG[state.mode].label}を ${state.session.correct} 問正解しました。上のモード切り替えから別ジャンルにも挑戦できます。`;
 }
 
 function toggleSound() {
@@ -757,6 +1106,106 @@ function toggleSound() {
 function syncSoundButton() {
   dom.soundToggle.textContent = state.soundEnabled ? "サウンド ON" : "サウンド OFF";
   dom.soundToggle.setAttribute("aria-pressed", String(state.soundEnabled));
+}
+
+function setVisualMode(mode) {
+  state.visualMode = mode;
+  document.body.dataset.visual = mode;
+  localStorage.setItem(STORAGE_KEYS.visual, JSON.stringify(mode));
+  syncVisualButtons();
+  render();
+}
+
+function syncVisualButtons() {
+  for (const button of dom.visualToggle.querySelectorAll("[data-visual-mode]")) {
+    const active = button.dataset.visualMode === state.visualMode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
+function getPokemonVisual(pokemon) {
+  return state.visualMode === "pixel" ? pokemon.sprite || pokemon.image : pokemon.image || pokemon.sprite;
+}
+
+function buildFallbackSpriteUrl(id) {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+}
+
+async function shareToX() {
+  const payload = buildSharePayload();
+  const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+    payload.text,
+  )}&url=${encodeURIComponent(payload.url)}`;
+
+  window.open(intentUrl, "_blank", "noopener,noreferrer");
+  setShareNote("X の共有画面を開きました。");
+}
+
+async function shareToInstagram() {
+  const payload = buildSharePayload();
+
+  if (navigator.share) {
+    try {
+      await navigator.share(payload);
+      setShareNote("共有シートを開きました。Instagram が出る端末ではそのまま共有できます。");
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  await copyTextToClipboard(`${payload.text}\n${payload.url}`);
+  setShareNote("Instagram へ直接投稿できない環境なので、共有文をコピーしました。貼り付けて使えます。");
+}
+
+async function copyShareLink() {
+  const payload = buildSharePayload();
+  await copyTextToClipboard(`${payload.text}\n${payload.url}`);
+  setShareNote("共有文と URL をコピーしました。");
+}
+
+function buildSharePayload() {
+  const url = window.location.href;
+  const scoreText = state.summary
+    ? `${MODE_CONFIG[state.mode].label}で ${state.summary.score} 正解`
+    : `${MODE_CONFIG[state.mode].label}に挑戦中。現在 ${state.session.correct} 問正解`;
+  const visualText = state.visualMode === "pixel" ? "ドット絵表示" : "イラスト表示";
+  const text = `ポケモンクイズラボで ${scoreText}。${visualText}でも遊べる PokeAPI クイズです。 #ポケモンクイズラボ #PokeAPI`;
+
+  return {
+    title: "ポケモンクイズラボ",
+    text,
+    url,
+  };
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "absolute";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
+}
+
+function setShareNote(text) {
+  state.shareNote = text;
+  renderShareNote();
+}
+
+function renderShareNote() {
+  dom.shareNote.textContent = state.shareNote;
 }
 
 function playCry(url) {
@@ -783,7 +1232,7 @@ function renderLoadError(error) {
       <p>${escapeHtml(error.message)}</p>
     </section>
   `;
-  dom.answerGrid.innerHTML = "";
+  dom.interactionPanel.innerHTML = "";
   dom.feedbackPanel.innerHTML = `
     <p class="feedback-kicker">Retry</p>
     <h2 class="feedback-title">ページを再読み込みしてください</h2>
@@ -792,8 +1241,60 @@ function renderLoadError(error) {
   dom.nextButton.hidden = true;
 }
 
-function excludeById(pokemon, id) {
-  return pokemon.filter((entry) => entry.id !== id);
+function normalizePokemonInput(value) {
+  return toKatakana(
+    value
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/g, "")
+      .replace(/[・･]/g, "")
+      .replaceAll("♀", "メス")
+      .replaceAll("♂", "オス"),
+  );
+}
+
+function buildAnswerKeys(name) {
+  const variants = new Set([name, toHiragana(name), toKatakana(name)]);
+  const expanded = new Set();
+
+  for (const variant of variants) {
+    expanded.add(variant);
+    expanded.add(variant.replaceAll("♀", "メス"));
+    expanded.add(variant.replaceAll("♂", "オス"));
+    expanded.add(variant.replaceAll("２", "2"));
+    expanded.add(variant.replaceAll("2", "２"));
+    expanded.add(variant.replace(/[・･]/g, ""));
+  }
+
+  return new Set([...expanded].map(normalizePokemonInput));
+}
+
+function toKatakana(value) {
+  return [...value]
+    .map((char) => {
+      const codePoint = char.codePointAt(0);
+      if (codePoint >= 0x3041 && codePoint <= 0x3096) {
+        return String.fromCodePoint(codePoint + 0x60);
+      }
+      return char;
+    })
+    .join("");
+}
+
+function toHiragana(value) {
+  return [...value]
+    .map((char) => {
+      const codePoint = char.codePointAt(0);
+      if (codePoint >= 0x30a1 && codePoint <= 0x30f6) {
+        return String.fromCodePoint(codePoint - 0x60);
+      }
+      return char;
+    })
+    .join("");
+}
+
+function isSimpleKanaName(name) {
+  return /^[ァ-ヶー]+$/.test(name.normalize("NFKC").replace(/[・･\s]/g, ""));
 }
 
 function joinTypeLabels(types) {
@@ -806,23 +1307,21 @@ function formatMetric(value, metric) {
 
 function sampleMany(items, count) {
   const copy = [...items];
-  shuffle(copy);
-  return copy.slice(0, count);
-}
-
-function sampleOne(items) {
-  return items[Math.floor(Math.random() * items.length)];
-}
-
-function shuffle(items) {
-  const copy = [...items];
 
   for (let index = copy.length - 1; index > 0; index -= 1) {
     const randomIndex = Math.floor(Math.random() * (index + 1));
     [copy[index], copy[randomIndex]] = [copy[randomIndex], copy[index]];
   }
 
-  return copy;
+  return copy.slice(0, count);
+}
+
+function sampleOne(items) {
+  if (!items.length) {
+    return null;
+  }
+
+  return items[Math.floor(Math.random() * items.length)];
 }
 
 function defaultRecord() {
@@ -861,6 +1360,22 @@ function loadSoundPreference() {
   } catch (error) {
     console.warn("Failed to parse sound preference", error);
     return true;
+  }
+}
+
+function loadVisualPreference() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.visual);
+
+    if (!raw) {
+      return "art";
+    }
+
+    const parsed = JSON.parse(raw);
+    return parsed === "pixel" ? "pixel" : "art";
+  } catch (error) {
+    console.warn("Failed to parse visual preference", error);
+    return "art";
   }
 }
 
