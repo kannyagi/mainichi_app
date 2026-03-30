@@ -1,6 +1,12 @@
 const QUIZ_LENGTH = 6;
 const DATA_URL = "./data/pokemon.json";
 const APP_URL = "https://kannyagi.github.io/mainichi_app/day_01/";
+const ANSWER_SFX_URLS = {
+  correct: "./assets/audio/correct.mp3",
+  wrong: "./assets/audio/incorrect.mp3",
+};
+const ANSWER_EFFECT_DURATION_MS = 900;
+const CRY_DELAY_MS = 320;
 const STORAGE_KEYS = {
   records: "pokemon-quiz-lab-records-v2",
   sound: "pokemon-quiz-lab-sound-v1",
@@ -242,12 +248,16 @@ const state = {
   textDraft: "",
   lastSubmission: null,
   answered: false,
+  answerEffect: null,
   awaitingSummary: false,
   summary: null,
   loading: true,
   soundEnabled: loadSoundPreference(),
   records: loadRecords(),
   audio: null,
+  sfxAudio: null,
+  answerEffectTimer: null,
+  cryTimer: null,
 };
 
 function createSession() {
@@ -359,6 +369,14 @@ bootstrap().catch((error) => {
 async function bootstrap() {
   state.audio = new Audio();
   state.audio.preload = "none";
+  state.sfxAudio = {
+    correct: new Audio(ANSWER_SFX_URLS.correct),
+    wrong: new Audio(ANSWER_SFX_URLS.wrong),
+  };
+
+  for (const audio of Object.values(state.sfxAudio)) {
+    audio.preload = "auto";
+  }
 
   const response = await fetch(DATA_URL);
 
@@ -883,6 +901,7 @@ function pickFreshMany(pool, count) {
 }
 
 function resetInteractionState() {
+  clearPendingFeedback();
   state.textDraft = "";
   state.selectedTypes = [];
   state.selectedCompare = null;
@@ -956,6 +975,7 @@ function renderQuestionStage() {
   }
 
   const question = state.currentQuestion;
+  const answerEffectMarkup = buildAnswerEffectMarkup();
 
   switch (question.mode) {
     case "silhouette":
@@ -974,6 +994,7 @@ function renderQuestionStage() {
             <span class="info-badge">${escapeHtml(getLocalizedCategory(question.pokemon))}</span>
           </div>
         </section>
+        ${answerEffectMarkup}
       `;
       break;
     case "type":
@@ -992,6 +1013,7 @@ function renderQuestionStage() {
             <span class="info-badge">${escapeHtml(state.locale === "en" ? "Choose from all 18 types" : "全18タイプから選択")}</span>
           </div>
         </section>
+        ${answerEffectMarkup}
       `;
       break;
     case "weight":
@@ -1010,6 +1032,7 @@ function renderQuestionStage() {
             </div>
           </div>
         </section>
+        ${answerEffectMarkup}
       `;
       break;
     case "shiritori":
@@ -1032,11 +1055,25 @@ function renderQuestionStage() {
             </div>
           </div>
         </section>
+        ${answerEffectMarkup}
       `;
       break;
     default:
       dom.questionStage.innerHTML = "";
   }
+}
+
+function buildAnswerEffectMarkup() {
+  if (!state.answerEffect) {
+    return "";
+  }
+
+  const symbol = state.answerEffect === "correct" ? "◯" : "×";
+  return `
+    <div class="answer-effect answer-effect--${state.answerEffect}" aria-hidden="true">
+      <span>${symbol}</span>
+    </div>
+  `;
 }
 
 function renderInteractionPanel() {
@@ -1282,7 +1319,13 @@ function lockAnswer(isCorrect, submission) {
   }
 
   state.awaitingSummary = state.session.round === state.session.total;
-  playCry(state.currentQuestion.correctPokemon?.cry);
+  triggerAnswerEffect(isCorrect);
+  playAnswerFeedback(
+    isCorrect,
+    state.currentQuestion.resultPokemon?.length === 1
+      ? state.currentQuestion.correctPokemon?.cry
+      : null,
+  );
   render();
 }
 
@@ -1553,6 +1596,17 @@ function toggleLocale() {
 function toggleSound() {
   state.soundEnabled = !state.soundEnabled;
   localStorage.setItem(STORAGE_KEYS.sound, JSON.stringify(state.soundEnabled));
+
+  if (!state.soundEnabled) {
+    clearPendingFeedback();
+    stopAudio(state.audio);
+
+    if (state.sfxAudio) {
+      stopAudio(state.sfxAudio.correct);
+      stopAudio(state.sfxAudio.wrong);
+    }
+  }
+
   syncSoundButton();
 }
 
@@ -1638,6 +1692,79 @@ function playCry(url) {
     state.audio.play().catch(() => {});
   } catch (error) {
     console.warn("Failed to play cry", error);
+  }
+}
+
+function playAnswerFeedback(isCorrect, cryUrl) {
+  playVerdictSound(isCorrect ? "correct" : "wrong");
+
+  if (!cryUrl || !state.soundEnabled) {
+    return;
+  }
+
+  if (state.cryTimer) {
+    clearTimeout(state.cryTimer);
+  }
+
+  state.cryTimer = setTimeout(() => {
+    state.cryTimer = null;
+    playCry(cryUrl);
+  }, CRY_DELAY_MS);
+}
+
+function playVerdictSound(kind) {
+  if (!state.soundEnabled || !state.sfxAudio?.[kind]) {
+    return;
+  }
+
+  const audio = state.sfxAudio[kind];
+
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  } catch (error) {
+    console.warn("Failed to play verdict sound", error);
+  }
+}
+
+function triggerAnswerEffect(isCorrect) {
+  if (state.answerEffectTimer) {
+    clearTimeout(state.answerEffectTimer);
+  }
+
+  state.answerEffect = isCorrect ? "correct" : "wrong";
+  state.answerEffectTimer = setTimeout(() => {
+    state.answerEffect = null;
+    state.answerEffectTimer = null;
+    render();
+  }, ANSWER_EFFECT_DURATION_MS);
+}
+
+function clearPendingFeedback() {
+  if (state.answerEffectTimer) {
+    clearTimeout(state.answerEffectTimer);
+    state.answerEffectTimer = null;
+  }
+
+  if (state.cryTimer) {
+    clearTimeout(state.cryTimer);
+    state.cryTimer = null;
+  }
+
+  state.answerEffect = null;
+}
+
+function stopAudio(audio) {
+  if (!audio) {
+    return;
+  }
+
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+  } catch (error) {
+    console.warn("Failed to stop audio", error);
   }
 }
 

@@ -393,6 +393,7 @@ input:focus-visible {
 }
 
 .question-stage {
+  position: relative;
   margin-top: 14px;
   min-height: 320px;
   border-radius: 28px;
@@ -401,6 +402,7 @@ input:focus-visible {
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.66), transparent 28%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 248, 255, 0.9));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  overflow: hidden;
 }
 
 .question-shell,
@@ -478,6 +480,43 @@ input:focus-visible {
 
 .visual-frame.is-revealed img {
   transform: translateY(-4px);
+}
+
+.answer-effect {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  animation: verdict-pop 900ms ease both;
+}
+
+.answer-effect--correct {
+  background: radial-gradient(circle, rgba(255, 78, 78, 0.16) 0%, rgba(255, 78, 78, 0) 60%);
+}
+
+.answer-effect--wrong {
+  background: radial-gradient(circle, rgba(59, 123, 255, 0.14) 0%, rgba(59, 123, 255, 0) 60%);
+}
+
+.answer-effect span {
+  display: inline-block;
+  font-family: "Outfit", sans-serif;
+  font-size: clamp(5rem, 28vw, 9rem);
+  font-weight: 800;
+  line-height: 1;
+  text-shadow:
+    0 10px 30px rgba(16, 25, 56, 0.2),
+    0 0 18px rgba(255, 255, 255, 0.7);
+}
+
+.answer-effect--correct span {
+  color: #ff3b30;
+}
+
+.answer-effect--wrong span {
+  color: #2f7cff;
 }
 
 .compare-meter {
@@ -1091,6 +1130,7 @@ body[data-visual="pixel"] .type-button,
 body[data-visual="pixel"] .language-toggle,
 body[data-visual="pixel"] .share-button,
 body[data-visual="pixel"] .sound-toggle,
+body[data-visual="pixel"] .answer-effect,
 body[data-visual="pixel"] .answer-card-visual,
 body[data-visual="pixel"] .submit-button,
 body[data-visual="pixel"] .ghost-button,
@@ -1126,6 +1166,11 @@ body[data-visual="pixel"] .compare-card-visual img {
 body[data-visual="pixel"] .answer-card-visual img {
   width: min(18vw, 72px);
   max-height: 72px;
+}
+
+body[data-visual="pixel"] .answer-effect span {
+  font-family: "DotGothic16", monospace;
+  text-shadow: 6px 6px 0 rgba(16, 25, 56, 0.12);
 }
 
 body[data-visual="pixel"] .visual-frame::after,
@@ -1164,6 +1209,28 @@ body[data-visual="pixel"] .type-button::after {
 
   50% {
     transform: scale(1.04);
+  }
+}
+
+@keyframes verdict-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  18% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+
+  72% {
+    opacity: 0.96;
+    transform: scale(0.98);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.14);
   }
 }
 
