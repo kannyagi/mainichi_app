@@ -183,6 +183,10 @@ h2 {
   gap: 16px;
 }
 
+.card-grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .app-card {
   padding: 20px;
   border-radius: 28px;
@@ -317,6 +321,10 @@ h2 {
 
   .card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card-grid.single {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .coming-list {
