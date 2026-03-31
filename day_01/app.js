@@ -5,11 +5,12 @@ const ANSWER_SFX_URLS = {
   correct: "./assets/audio/correct.mp3",
   wrong: "./assets/audio/incorrect.mp3",
 };
+const BGM_AUDIO_URL = "./assets/audio/bgm.mp3";
 const ANSWER_EFFECT_DURATION_MS = 900;
 const CRY_DELAY_MS = 320;
 const STORAGE_KEYS = {
   records: "pokemon-quiz-lab-records-v2",
-  sound: "pokemon-quiz-lab-sound-v1",
+  sound: "pokemon-q-sound-v2",
   visual: "pokemon-quiz-lab-visual-v1",
   locale: "pokemon-q-locale-v1",
 };
@@ -256,6 +257,7 @@ const state = {
   records: loadRecords(),
   audio: null,
   sfxAudio: null,
+  bgmAudio: null,
   answerEffectTimer: null,
   cryTimer: null,
 };
@@ -369,14 +371,22 @@ bootstrap().catch((error) => {
 async function bootstrap() {
   state.audio = new Audio();
   state.audio.preload = "none";
+  state.audio.volume = 0.8;
   state.sfxAudio = {
     correct: new Audio(ANSWER_SFX_URLS.correct),
     wrong: new Audio(ANSWER_SFX_URLS.wrong),
   };
+  state.bgmAudio = new Audio(BGM_AUDIO_URL);
+  state.bgmAudio.loop = true;
+  state.bgmAudio.preload = "auto";
+  state.bgmAudio.volume = 0.26;
 
   for (const audio of Object.values(state.sfxAudio)) {
     audio.preload = "auto";
   }
+
+  state.sfxAudio.correct.volume = 0.96;
+  state.sfxAudio.wrong.volume = 0.9;
 
   const response = await fetch(DATA_URL);
 
@@ -394,6 +404,7 @@ async function bootstrap() {
   state.index = buildIndex(state.data);
   state.loading = false;
   applyStaticCopy();
+  updateBgmPlayback();
 
   startMode(state.mode);
 }
@@ -1600,11 +1611,14 @@ function toggleSound() {
   if (!state.soundEnabled) {
     clearPendingFeedback();
     stopAudio(state.audio);
+    stopAudio(state.bgmAudio);
 
     if (state.sfxAudio) {
       stopAudio(state.sfxAudio.correct);
       stopAudio(state.sfxAudio.wrong);
     }
+  } else {
+    updateBgmPlayback();
   }
 
   syncSoundButton();
@@ -1614,6 +1628,23 @@ function syncSoundButton() {
   const copy = copyForLocale();
   dom.soundToggle.textContent = state.soundEnabled ? copy.soundOn : copy.soundOff;
   dom.soundToggle.setAttribute("aria-pressed", String(state.soundEnabled));
+}
+
+function updateBgmPlayback() {
+  if (!state.bgmAudio) {
+    return;
+  }
+
+  if (!state.soundEnabled) {
+    stopAudio(state.bgmAudio);
+    return;
+  }
+
+  try {
+    state.bgmAudio.play().catch(() => {});
+  } catch (error) {
+    console.warn("Failed to play bgm", error);
+  }
 }
 
 function setVisualMode(mode) {
@@ -1947,13 +1978,13 @@ function loadSoundPreference() {
     const raw = localStorage.getItem(STORAGE_KEYS.sound);
 
     if (raw === null) {
-      return true;
+      return false;
     }
 
     return Boolean(JSON.parse(raw));
   } catch (error) {
     console.warn("Failed to parse sound preference", error);
-    return true;
+    return false;
   }
 }
 
