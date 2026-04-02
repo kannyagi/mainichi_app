@@ -1026,9 +1026,8 @@ function shareToX() {
     return;
   }
 
-  const url = getShareUrl();
   const text = buildShareText();
-  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
   window.open(shareUrl, '_blank', 'noopener,noreferrer');
 }
 
@@ -1036,7 +1035,8 @@ function buildShareText() {
   const correctCount = state.history.filter(entry => entry.correct).length;
   const totalCount = state.history.length;
   const correctRate = totalCount ? Math.round((correctCount / totalCount) * 100) : 0;
-  return `${getCurrentChallengeName()} イントロドンで ${correctCount}/${totalCount}問正解 (${correctRate}%) #イントロドン`;
+  const url = getShareUrl();
+  return `「${getCurrentChallengeName()} イントロドン」で ${correctCount}/${totalCount}問正解 (${correctRate}%) #イントロドン\n👇ここから遊べるよ！\n${url}`;
 }
 
 async function copyShareUrl() {
