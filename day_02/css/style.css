@@ -1322,11 +1322,12 @@ html, body {
 @media (max-width: 400px) {
   .genre-grid { grid-template-columns: repeat(3, 1fr); }
   .logo-text  { font-size: 44px; }
-  .logo-line1,
-  .logo-line2 { display: block; }
 }
 
 @media (max-width: 560px) {
+  .logo-line1,
+  .logo-line2 { display: block; }
+
   .mode-switch {
     grid-template-columns: 1fr;
   }
