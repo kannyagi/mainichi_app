@@ -1036,7 +1036,7 @@ function buildShareText() {
   const correctCount = state.history.filter(entry => entry.correct).length;
   const totalCount = state.history.length;
   const correctRate = totalCount ? Math.round((correctCount / totalCount) * 100) : 0;
-  return `「${getCurrentChallengeName()} イントロドン」で ${state.score}pt。${correctCount}/${totalCount}問正解 (${correctRate}%) #イントロドン`;
+  return `${getCurrentChallengeName()} イントロドンで ${correctCount}/${totalCount}問正解 (${correctRate}%) #イントロドン`;
 }
 
 async function copyShareUrl() {
