@@ -1685,7 +1685,7 @@ async function copyShareLink() {
 function buildSharePayload() {
   const url = APP_URL;
   const copy = copyForLocale();
-  const text = `${copy.shareText}\n${url}`;
+  const text = `${copy.shareText}\n👇ここから遊べるよ！\n${url}`;
 
   return {
     title: copy.title,
