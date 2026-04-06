@@ -1,0 +1,508 @@
+/* ============================================================
+   style.css
+   ゲーム全体のスタイル。スマホ最優先のミニマルデザイン。
+   ============================================================ */
+
+/* ---- CSS カスタムプロパティ（デザイントークン） ---- */
+:root {
+  --color-bg:          #0f0f14;
+  --color-surface:     #1a1a24;
+  --color-primary:     #4ecca3;
+  --color-primary-dk:  #2ea882;
+  --color-accent:      #ff6b6b;
+  --color-text:        #e8e8f0;
+  --color-text-dim:    #888899;
+  --color-border:      #2a2a38;
+  --radius:            12px;
+  --transition:        0.2s ease;
+}
+
+/* ---- リセット ---- */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  /* タップ時のハイライトを無効化 */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ============================================================
+   画面管理: .screen + .active クラスで切り替え
+   ============================================================ */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  padding: 16px;
+}
+
+.screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ============================================================
+   ローディング画面
+   ============================================================ */
+.loading-content {
+  text-align: center;
+  width: 80%;
+  max-width: 320px;
+}
+
+.loading-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: var(--color-surface);
+  border-radius: 3px;
+  margin: 28px 0 14px;
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primary);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.loading-text {
+  color: var(--color-text-dim);
+  font-size: 13px;
+}
+
+/* ============================================================
+   タイトル画面
+   ============================================================ */
+.title-content {
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.title {
+  font-size: 44px;
+  font-weight: 800;
+  color: var(--color-primary);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.subtitle {
+  font-size: 18px;
+  color: var(--color-text-dim);
+  margin-top: 6px;
+  margin-bottom: 40px;
+}
+
+.section {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.section-label {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+.hint-text {
+  font-size: 12px;
+  color: var(--color-text-dim);
+  margin-top: 20px;
+}
+
+/* ============================================================
+   ボタン共通
+   ============================================================ */
+.btn-group {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  -webkit-user-select: none;
+  user-select: none;
+  line-height: 1.2;
+}
+
+.btn:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+/* 選択中・フォーカス状態 */
+.btn.active {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(78, 204, 163, 0.1);
+}
+
+/* プライマリボタン（スタート等） */
+.btn-primary {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #0f0f14;
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  margin-top: 16px;
+}
+
+.btn-primary:active {
+  background: var(--color-primary-dk);
+  border-color: var(--color-primary-dk);
+}
+
+/* アウトラインボタン */
+.btn-outline {
+  background: transparent;
+  border-color: var(--color-border);
+  color: var(--color-text-dim);
+}
+
+/* 小さいボタン */
+.btn-small {
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
+/* ============================================================
+   ゲーム画面レイアウト
+   ============================================================ */
+
+/* ゲーム画面は上から並べる（flex column） */
+#screen-game {
+  justify-content: flex-start;
+  background: #000;
+  padding: 0;
+}
+
+/* ---- ヘッダー ---- */
+.game-header {
+  width: 100%;
+  padding: 10px 16px 8px;
+  background: rgba(0, 0, 0, 0.85);
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.game-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.game-mode-label {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+/* タイマー表示 */
+.game-timer {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+/* タイマー警告（残り20秒以下） */
+.game-timer.warning {
+  color: var(--color-accent);
+  animation: timerPulse 0.8s ease infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.game-quest-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.quest-prefix {
+  font-size: 13px;
+  color: var(--color-text-dim);
+  flex-shrink: 0;
+}
+
+.quest-name {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  /* 文字が溢れた場合は省略 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- カメラ + Canvas エリア ---- */
+.camera-container {
+  position: relative;
+  width: 100%;
+  flex: 1;         /* 残りの高さをすべて使う */
+  overflow: hidden;
+  background: #000;
+  min-height: 0;   /* flex 子要素が縮まるようにする */
+}
+
+#camera-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#detection-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* Canvas 自体は pointer-events を受け取らない */
+  pointer-events: none;
+}
+
+/* ---- 認識進捗バー（カメラ上に重ねる） ---- */
+.progress-overlay {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 20px;
+  padding: 8px 14px;
+  z-index: 5;
+}
+
+.progress-overlay.hidden { display: none; }
+
+.progress-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--color-primary);
+  border-radius: 4px;
+  transition: width 0.1s linear;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: #fff;
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: right;
+}
+
+/* ---- フッター ---- */
+.game-footer {
+  width: 100%;
+  padding: 8px 16px;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.score-area {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.score-area.hidden { visibility: hidden; }
+
+.score-label {
+  font-size: 12px;
+  color: var(--color-text-dim);
+}
+
+.score-count {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-unit {
+  font-size: 13px;
+  color: var(--color-text-dim);
+}
+
+/* ---- クリア演出オーバーレイ ---- */
+.clear-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 20;
+}
+
+.clear-overlay.hidden { display: none; }
+
+.clear-badge {
+  text-align: center;
+  animation: clearPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.3) both;
+}
+
+@keyframes clearPop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.clear-check {
+  font-size: 72px;
+  color: var(--color-primary);
+  line-height: 1;
+  /* テキストとして表示し、絵文字と混同しない */
+  font-weight: 900;
+}
+
+.clear-word {
+  font-size: 30px;
+  font-weight: 800;
+  color: #fff;
+  margin-top: 10px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+}
+
+/* ============================================================
+   結果画面
+   ============================================================ */
+.result-content {
+  width: 90%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.result-title {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin-bottom: 28px;
+}
+
+.result-stats {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+.result-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.result-stat + .result-stat {
+  border-top: 1px solid var(--color-border);
+}
+
+.result-stat-label {
+  color: var(--color-text-dim);
+  font-size: 14px;
+}
+
+.result-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.result-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ============================================================
+   カメラエラー画面
+   ============================================================ */
+.error-content {
+  width: 85%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.error-icon {
+  font-size: 64px;
+  margin-bottom: 20px;
+}
+
+.error-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.error-message {
+  color: var(--color-text-dim);
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 28px;
+  white-space: pre-line; /* 改行コードを反映する */
+}
+
+/* ============================================================
+   ユーティリティ
+   ============================================================ */
+.hidden {
+  display: none !important;
+}

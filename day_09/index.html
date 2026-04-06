@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f0f14" />
+  <title>みつけろ！カメラ探偵</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ======================================================
+       ローディング画面
+       ====================================================== -->
+  <div id="screen-loading" class="screen active">
+    <div class="loading-content">
+      <h1 class="title">みつけろ！</h1>
+      <p class="subtitle">カメラ探偵</p>
+      <div class="loading-bar-wrap">
+        <div id="loading-bar" class="loading-bar"></div>
+      </div>
+      <p id="loading-text" class="loading-text">AIモデル読み込み中...</p>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       タイトル画面
+       ====================================================== -->
+  <div id="screen-title" class="screen">
+    <div class="title-content">
+      <h1 class="title">みつけろ！</h1>
+      <p class="subtitle">カメラ探偵</p>
+
+      <!-- モード選択 -->
+      <div class="section">
+        <p class="section-label">モード</p>
+        <div class="btn-group">
+          <button class="btn btn-mode active" data-mode="time-attack">タイムアタック</button>
+          <button class="btn btn-mode" data-mode="challenge">100秒チャレンジ</button>
+        </div>
+      </div>
+
+      <!-- ジャンル選択 -->
+      <div class="section">
+        <p class="section-label">ジャンル</p>
+        <div class="btn-group">
+          <button class="btn btn-genre active" data-genre="home">🏠 家の中</button>
+          <button class="btn btn-genre" data-genre="outdoor">🏙️ 外</button>
+        </div>
+      </div>
+
+      <button id="btn-start" class="btn btn-primary">スタート</button>
+
+      <p class="hint-text">※ カメラの使用許可が必要です</p>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ゲーム画面
+       ====================================================== -->
+  <div id="screen-game" class="screen">
+
+    <!-- ヘッダー: モード表示・タイマー・お題 -->
+    <div class="game-header">
+      <div class="game-info-row">
+        <span id="game-mode-label" class="game-mode-label"></span>
+        <span id="game-timer" class="game-timer">0.0s</span>
+      </div>
+      <div class="game-quest-row">
+        <span class="quest-prefix">さがせ！</span>
+        <span id="quest-name" class="quest-name">---</span>
+      </div>
+    </div>
+
+    <!-- カメラ映像 + 検出描画用 Canvas -->
+    <div class="camera-container">
+      <video id="camera-video" autoplay playsinline muted></video>
+      <canvas id="detection-canvas"></canvas>
+
+      <!-- 認識進捗バー（カメラ上に重ねる） -->
+      <div id="progress-overlay" class="progress-overlay hidden">
+        <div class="progress-track">
+          <div id="progress-fill" class="progress-fill"></div>
+        </div>
+        <span id="progress-label" class="progress-label">認識中...</span>
+      </div>
+    </div>
+
+    <!-- フッター: スコア・やめるボタン -->
+    <div class="game-footer">
+      <div id="score-area" class="score-area hidden">
+        <span class="score-label">クリア</span>
+        <span id="score-count" class="score-count">0</span>
+        <span class="score-unit">問</span>
+      </div>
+      <button id="btn-quit" class="btn btn-small btn-outline">やめる</button>
+    </div>
+
+    <!-- クリア演出オーバーレイ（カメラ全面に表示） -->
+    <div id="clear-overlay" class="clear-overlay hidden">
+      <div class="clear-badge">
+        <div class="clear-check">✓</div>
+        <p class="clear-word">みつけた！</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ======================================================
+       結果画面
+       ====================================================== -->
+  <div id="screen-result" class="screen">
+    <div class="result-content">
+      <h2 id="result-title" class="result-title">クリア！</h2>
+      <div id="result-stats" class="result-stats"></div>
+      <div class="result-btn-group">
+        <button id="btn-retry" class="btn btn-primary">もう一度</button>
+        <button id="btn-home" class="btn btn-outline">タイトルへ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       カメラエラー画面
+       ====================================================== -->
+  <div id="screen-camera-error" class="screen">
+    <div class="error-content">
+      <div class="error-icon">📷</div>
+      <h2 class="error-title">カメラを使えません</h2>
+      <p id="camera-error-message" class="error-message"></p>
+      <button id="btn-retry-camera" class="btn btn-primary">再試行</button>
+      <button id="btn-camera-home" class="btn btn-outline">タイトルへ</button>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       外部ライブラリ: TensorFlow.js + COCO-SSD
+       CDN から読み込み。GitHub Pages でもそのまま動作する。
+       ====================================================== -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+
+  <!-- ゲームスクリプト（依存順に読み込む） -->
+  <script src="js/config.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/detector.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>
